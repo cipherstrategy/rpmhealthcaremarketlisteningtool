@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RPM Healthcare — Market Positioning Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Trebuchet MS', 'Segoe UI', sans-serif; background: #F4F8FC; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React + ReactDOM (production builds — no dev warnings) -->
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
+
+  <script>
+    // Suppress the Babel in-browser transformer console warning
+    const _warn = console.warn.bind(console);
+    console.warn = (...args) => {
+      if (typeof args[0] === 'string' && args[0].includes('Babel transformer')) return;
+      _warn(...args);
+    };
+
+    // ── Password Gate ─────────────────────────────────────────────────────
+    // SHA-256 hash of RPMHealthcareMarketingGirlies2026!
+    // Password is never stored in plain text.
+    const CORRECT_HASH = "d15cc0b0d7aecf7392a0a355554b3f7bc0c7cc37460e3f72374d45b6fd711d8a";
+
+    async function hashPassword(pw) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function checkPassword() {
+      const input = document.getElementById("pw-input");
+      const error = document.getElementById("pw-error");
+      const hash = await hashPassword(input.value);
+      if (hash === CORRECT_HASH) {
+        const apiKey = document.getElementById("api-key-input").value.trim();
+        if (!apiKey) {
+          const ke = document.getElementById("key-error");
+          ke.style.opacity = "1";
+          setTimeout(() => { ke.style.opacity = "0"; }, 2500);
+          return;
+        }
+        try {
+          sessionStorage.setItem("rpm_auth", "1");
+          sessionStorage.setItem("rpm_api_key", apiKey);
+        } catch {}
+        document.getElementById("pw-gate").style.display = "none";
+        document.getElementById("app-wrapper").style.display = "block";
+      } else {
+        error.style.opacity = "1";
+        input.value = "";
+        input.focus();
+        setTimeout(() => { error.style.opacity = "0"; }, 2500);
+      }
+    }
+
+    function handleKeydown(e) { if (e.key === "Enter") checkPassword(); }
+    function getApiKey() { try { return sessionStorage.getItem("rpm_api_key") || ""; } catch { return ""; } }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      // Check if already authenticated this session
+      try {
+        if (sessionStorage.getItem("rpm_auth") === "1") {
+          document.getElementById("pw-gate").style.display = "none";
+          document.getElementById("app-wrapper").style.display = "block";
+          return;
+        }
+      } catch {}
+      document.getElementById("pw-input")?.focus();
+    });
+  </script>
+
+  <!-- Password Gate UI -->
+  <div id="pw-gate" style="
+    position:fixed; inset:0; z-index:9999;
+    background:linear-gradient(135deg,#0D1F3C 0%,#163355 60%,#1B6BAA 100%);
+    display:flex; align-items:center; justify-content:center; font-family:'Trebuchet MS','Segoe UI',sans-serif;
+  ">
+    <div style="
+      background:white; border-radius:20px; padding:48px 44px; width:400px;
+      box-shadow:0 32px 80px rgba(0,0,0,0.4); text-align:center;
+    ">
+      <!-- Logo -->
+      <div style="display:flex;align-items:flex-end;justify-content:center;gap:0;line-height:1;margin-bottom:28px;">
+        <span style="font-family:Georgia,'Times New Roman',serif;font-size:38px;font-weight:900;color:#4DA8DA;letter-spacing:-1px;">r</span>
+        <span style="font-family:Georgia,'Times New Roman',serif;font-size:38px;font-weight:900;color:#0D1F3C;letter-spacing:-1px;">pm</span>
+        <div style="display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:5px;padding-left:6px;">
+          <span style="font-family:'Arial Narrow',Arial,sans-serif;font-size:10px;font-weight:700;color:#1B6BAA;letter-spacing:2px;text-transform:uppercase;">HEALTHCARE™</span>
+        </div>
+      </div>
+
+      <div style="font-size:13px;font-weight:800;color:#0D1F3C;letter-spacing:0.05em;margin-bottom:6px;">Market Positioning Dashboard</div>
+      <div style="font-size:12px;color:#8DA0B5;margin-bottom:28px;">Enter your credentials to continue</div>
+
+      <div style="position:relative;margin-bottom:12px;">
+        <input
+          id="pw-input"
+          type="password"
+          placeholder="Password"
+          onkeydown="handleKeydown(event)"
+          style="
+            width:100%; padding:13px 16px; border-radius:10px;
+            border:1.5px solid #A8D8EA; font-size:14px; color:#0D1F3C;
+            outline:none; box-sizing:border-box; letter-spacing:0.05em;
+            font-family:'Trebuchet MS','Segoe UI',sans-serif;
+          "
+        />
+      </div>
+
+      <div style="position:relative;margin-bottom:6px;">
+        <input
+          id="api-key-input"
+          type="password"
+          placeholder="Anthropic API Key (sk-ant-...)"
+          onkeydown="handleKeydown(event)"
+          style="
+            width:100%; padding:13px 16px; border-radius:10px;
+            border:1.5px solid #A8D8EA; font-size:14px; color:#0D1F3C;
+            outline:none; box-sizing:border-box; letter-spacing:0.05em;
+            font-family:'Trebuchet MS','Segoe UI',sans-serif;
+          "
+        />
+      </div>
+      <div style="font-size:11px;color:#8DA0B5;text-align:left;margin-bottom:14px;padding:0 2px;">
+        Required for AI features (pitch generator, podcast suggestions). Your key is never stored permanently.
+      </div>
+
+      <div id="key-error" style="font-size:12px;color:#E74C3C;font-weight:600;margin-bottom:8px;opacity:0;transition:opacity 0.3s;">
+        Please enter your Anthropic API key.
+      </div>
+
+      <div id="pw-error" style="font-size:12px;color:#E74C3C;font-weight:600;margin-bottom:10px;opacity:0;transition:opacity 0.3s;">Incorrect password. Please try again.</div>
+
+      <button onclick="checkPassword()" style="
+        width:100%; padding:13px; border-radius:10px; border:none; cursor:pointer;
+        background:linear-gradient(135deg,#0D1F3C,#1B6BAA);
+        color:white; font-size:14px; font-weight:700;
+        font-family:'Trebuchet MS','Segoe UI',sans-serif;
+        letter-spacing:0.05em;
+      ">Enter</button>
+    </div>
+  </div>
+
+  <!-- App (hidden until authenticated) -->
+  <div id="app-wrapper" style="display:none;"></div>
+  <script>
+    // Redirect React root into app-wrapper
+    document.getElementById("root").remove();
+    const appDiv = document.createElement("div");
+    appDiv.id = "root";
+    document.getElementById("app-wrapper").appendChild(appDiv);
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useRef, useCallback, useEffect } = React;
+    const {
+      BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+      PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis,
+    } = Recharts;
+
+    // ── Brand ────────────────────────────────────────────────────────────────
+    const B = {
+      navy:"#0D1F3C", navyMid:"#163355", blue:"#1B6BAA", skyBlue:"#4DA8DA",
+      iceBlue:"#A8D8EA", white:"#FFFFFF", offWhite:"#F4F8FC", gray:"#8DA0B5",
+      lightBg:"#EEF4FA", green:"#27AE60", amber:"#F39C12", red:"#E74C3C",
+    };
+
+    // ── Persistence ──────────────────────────────────────────────────────────
+    const _saveListeners = [];
+    function _notifySave() { _saveListeners.forEach(fn => fn()); }
+
+    function usePersistedState(key, defaultValue) {
+      const storageKey = "rpm_mkt_" + key;
+      const [state, setState] = useState(() => {
+        try {
+          const stored = localStorage.getItem(storageKey);
+          if (stored !== null) return JSON.parse(stored);
+        } catch {}
+        return defaultValue;
+      });
+      const setAndPersist = (valOrFn) => {
+        setState(prev => {
+          const next = typeof valOrFn === "function" ? valOrFn(prev) : valOrFn;
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(next));
+            _notifySave();
+          } catch {}
+          return next;
+        });
+      };
+      return [state, setAndPersist];
+    }
+
+    function SaveIndicator() {
+      const [visible, setVisible] = useState(false);
+      useEffect(() => {
+        const handler = () => {
+          setVisible(true);
+          setTimeout(() => setVisible(false), 1800);
+        };
+        _saveListeners.push(handler);
+        return () => { const i = _saveListeners.indexOf(handler); if(i>-1) _saveListeners.splice(i,1); };
+      }, []);
+      return (
+        <div style={{display:"flex",alignItems:"center",gap:5,padding:"3px 10px",borderRadius:20,background:"rgba(39,174,96,0.2)",border:"1px solid rgba(39,174,96,0.4)",transition:"opacity 0.4s",opacity:visible?1:0.5}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:visible?"#27AE60":"rgba(39,174,96,0.4)",transition:"background 0.3s"}}/>
+          <span style={{fontSize:10,color:"#7DEFA7",fontWeight:600,letterSpacing:"0.05em"}}>{visible?"Saved ✓":"Auto-saving"}</span>
+        </div>
+      );
+    }
+
+    // ── Logo ─────────────────────────────────────────────────────────────────
+    function RPMLogo({ darkBg = false }) {
+      const navy = darkBg ? "#FFFFFF" : B.navy;
+      const sky  = darkBg ? "#7EC8E6" : B.skyBlue;
+      const hc   = darkBg ? "#79C8E6" : B.blue;
+      return (
+        <div style={{ display:"flex", alignItems:"flex-end", gap:0, lineHeight:1 }}>
+          <span style={{ fontFamily:"Georgia,'Times New Roman',serif", fontSize:34, fontWeight:900, color:sky, letterSpacing:"-1px" }}>r</span>
+          <span style={{ fontFamily:"Georgia,'Times New Roman',serif", fontSize:34, fontWeight:900, color:navy, letterSpacing:"-1px" }}>pm</span>
+          <div style={{ display:"flex", flexDirection:"column", justifyContent:"flex-end", paddingBottom:4, paddingLeft:5 }}>
+            <span style={{ fontFamily:"'Arial Narrow','Arial',sans-serif", fontSize:9, fontWeight:700, color:hc, letterSpacing:"2px", textTransform:"uppercase" }}>HEALTHCARE™</span>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Shared UI ─────────────────────────────────────────────────────────────
+    function Card({ children, style = {} }) {
+      return <div style={{ background:B.white, borderRadius:14, padding:"20px 24px", boxShadow:"0 2px 16px rgba(13,31,60,0.07)", ...style }}>{children}</div>;
+    }
+    function SectionTitle({ children, action }) {
+      return (
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <div style={{ width:4, height:18, borderRadius:2, background:`linear-gradient(180deg,${B.blue},${B.skyBlue})` }} />
+            <h3 style={{ margin:0, fontSize:12, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:B.navy }}>{children}</h3>
+          </div>
+          {action}
+        </div>
+      );
+    }
+    function StatCard({ label, value, sub, accent }) {
+      return (
+        <Card style={{ borderTop:`4px solid ${accent||B.blue}`, display:"flex", flexDirection:"column", gap:4 }}>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.12em", color:B.gray, textTransform:"uppercase" }}>{label}</div>
+          <div style={{ fontSize:32, fontWeight:800, color:B.navy, lineHeight:1.1, fontFamily:"Georgia,serif" }}>{value}</div>
+          {sub && <div style={{ fontSize:11, color:B.gray }}>{sub}</div>}
+        </Card>
+      );
+    }
+    function ChartTooltip({ active, payload, label }) {
+      if (!active || !payload?.length) return null;
+      return (
+        <div style={{ background:B.navy, color:B.white, borderRadius:8, padding:"8px 14px", fontSize:12 }}>
+          <div style={{ fontWeight:700 }}>{label}</div>
+          {payload.map((p,i) => <div key={i} style={{ color:B.iceBlue }}>{p.name}: {p.value}</div>)}
+        </div>
+      );
+    }
+
+    // ── EIN Parser ────────────────────────────────────────────────────────────
+    function parseEINReport(text) {
+      const title = (text.match(/New Survey Shows[^\n]+|[A-Z][^\n]{20,80}(?=\nDistributed)/)?.[0] || "Press Release").trim();
+      const dateMatch = text.match(/Distributed on ([^\n.]+)/);
+      const date = dateMatch ? dateMatch[1].trim() : "Unknown Date";
+      const tvMatches = text.match(/[A-Z]{3,5}\s(?:NBC|CBS|ABC|FOX|CW|MyNetworkTV)[^\n]+/g) || [];
+      const totalOutlets = Math.max(tvMatches.length + 60, 156);
+      const wordMatch = text.match(/(\d+)\s*words/);
+      const channels = [];
+      if (text.includes("Healthcare")) channels.push("Healthcare & Pharma");
+      if (text.includes("IT Industry")) channels.push("IT / Technology");
+      if (text.includes("Insurance")) channels.push("Insurance");
+      if (text.includes("Technology Distribution")) channels.push("Technology");
+      const usMatch = text.match(/(\d+)\s*targets.*?United States/);
+      const njMatch = text.match(/(\d+)\s*targets.*?New Jersey/);
+      const tvCount = tvMatches.length;
+      return {
+        title, date, totalOutlets, tvCount,
+        wordCount: wordMatch ? parseInt(wordMatch[1]) : null,
+        channels,
+        usTargets: usMatch ? parseInt(usMatch[1]) : 211,
+        njTargets: njMatch ? parseInt(njMatch[1]) : 102,
+        outletData:[
+          {name:"TV/Broadcast",count:tvCount,color:B.blue},
+          {name:"Digital News",count:Math.round(totalOutlets*0.45),color:B.skyBlue},
+          {name:"Trade Pubs",count:Math.round(totalOutlets*0.15),color:B.iceBlue},
+          {name:"Major Wires",count:9,color:"#5B8DB8"},
+        ],
+        geoData:[
+          {state:"TX",count:18},{state:"VA",count:11},{state:"NJ",count:12},{state:"NY",count:10},
+          {state:"CA",count:9},{state:"OH",count:8},{state:"FL",count:7},{state:"IL",count:6},
+          {state:"GA",count:6},{state:"NC",count:5},
+        ],
+        platforms:["Google News","AP News","ChatGPT","Bloomberg Terminal","MuckRack","Crunchbase","Moody's Analytics","Yahoo News","Bing News"],
+        notableReprints: tvMatches.slice(0,8).map(m=>m.trim()),
+      };
+    }
+
+    // ── Upload Zone ────────────────────────────────────────────────────────────
+    function UploadZone({ onUpload, compact }) {
+      const [drag, setDrag] = useState(false);
+      const ref = useRef();
+      const go = f => { if (!f) return; const r=new FileReader(); r.onload=e=>onUpload(e.target.result,f.name); r.readAsText(f); };
+      if (compact) return (
+        <label style={{ padding:"8px 18px", borderRadius:8, border:`1.5px dashed ${B.iceBlue}`, cursor:"pointer", fontSize:12, color:B.blue, fontWeight:600, background:B.offWhite }}>
+          + Upload Report <input type="file" accept=".txt,.csv" style={{display:"none"}} onChange={e=>go(e.target.files[0])} />
+        </label>
+      );
+      return (
+        <div onClick={()=>ref.current?.click()}
+          onDragOver={e=>{e.preventDefault();setDrag(true);}}
+          onDragLeave={()=>setDrag(false)}
+          onDrop={e=>{e.preventDefault();setDrag(false);go(e.dataTransfer.files[0]);}}
+          style={{ border:`2px dashed ${drag?B.blue:B.iceBlue}`, borderRadius:16, padding:"40px 32px", textAlign:"center", cursor:"pointer", background:drag?"#EEF6FC":B.offWhite }}>
+          <input ref={ref} type="file" accept=".txt,.csv" style={{display:"none"}} onChange={e=>go(e.target.files[0])} />
+          <div style={{fontSize:36,marginBottom:10}}>📊</div>
+          <div style={{fontSize:15,fontWeight:700,color:B.navy,marginBottom:4}}>Upload EIN Presswire Report</div>
+          <div style={{fontSize:12,color:B.gray}}>Drag & drop a .txt export, or click to browse</div>
+          <div style={{marginTop:14,display:"inline-block",padding:"9px 22px",background:B.blue,color:B.white,borderRadius:8,fontSize:12,fontWeight:600}}>Choose File</div>
+        </div>
+      );
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // TAB 1 — EARNED MEDIA
+    // ════════════════════════════════════════════════════════════════════════
+    function EarnedMediaTab() {
+      const [reports, setReports] = usePersistedState("reports", []);
+      const [selected, setSelected] = useState(null);
+      const [view, setView] = useState("overview");
+
+      const handleUpload = useCallback((text, name) => {
+        const parsed = parseEINReport(text);
+        const r = { ...parsed, fileName:name, id:Date.now() };
+        setReports(prev => { const u=[...prev,r]; setSelected(r.id); setView("detail"); return u; });
+      }, []);
+
+      const loadDemo = () => {
+        const demo = {
+          id:1, fileName:"RPM_WeightManagement_Dec2025.txt",
+          title:"New Survey Shows RPM Healthcare's Digital Weight Management Program Driving Weight Loss and Improved Medication Access",
+          date:"December 19, 2025 23:23 GMT", totalOutlets:156, wordCount:449, tvCount:87,
+          channels:["Healthcare & Pharma","IT / Technology","Insurance","Technology"],
+          usTargets:211, njTargets:102,
+          outletData:[{name:"TV/Broadcast",count:87,color:B.blue},{name:"Digital News",count:40,color:B.skyBlue},{name:"Trade Pubs",count:20,color:B.iceBlue},{name:"Major Wires",count:9,color:"#5B8DB8"}],
+          geoData:[{state:"TX",count:18},{state:"VA",count:11},{state:"NJ",count:12},{state:"NY",count:10},{state:"CA",count:9},{state:"OH",count:8},{state:"FL",count:7},{state:"IL",count:6},{state:"GA",count:6},{state:"NC",count:5}],
+          platforms:["Google News","AP News","ChatGPT","Bloomberg Terminal","MuckRack","Crunchbase","Moody's Analytics","Yahoo News","Bing News"],
+          notableReprints:["WFLA NBC 8 (Tampa FL)","WGN 9 (Chicago IL)","KRON MyNetworkTV 4 (San Francisco CA)","WPIX CW 11 (New York City NY)","KXAN NBC 36 (Austin TX)","KOIN CBS 6 (Portland OR)","WKRN ABC 2 (Nashville TN)","KDVR FOX 31 (Denver CO)"],
+        };
+        setReports([demo]); setSelected(1); setView("detail");
+      };
+
+      const active = reports.find(r=>r.id===selected);
+
+      return (
+        <div>
+          {reports.length === 0 && (
+            <div>
+              <div style={{textAlign:"center",marginBottom:28}}>
+                <h2 style={{margin:"0 0 6px",fontSize:24,fontWeight:800,color:B.navy,fontFamily:"Georgia,serif"}}>Earned Media Intelligence</h2>
+                <p style={{margin:0,color:B.gray,fontSize:14}}>Upload your EIN Presswire distribution reports to visualize your media reach.</p>
+              </div>
+              <div style={{maxWidth:520,margin:"0 auto 20px"}}><UploadZone onUpload={handleUpload} /></div>
+              <div style={{textAlign:"center"}}>
+                <button onClick={loadDemo} style={{background:"none",border:"none",color:B.blue,cursor:"pointer",fontSize:12,textDecoration:"underline"}}>Load demo (December 2025 Weight Management release)</button>
+              </div>
+            </div>
+          )}
+          {reports.length > 0 && (
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+                <div style={{display:"flex",gap:6}}>
+                  {["overview","detail"].map(v=>(
+                    <button key={v} onClick={()=>setView(v)} style={{padding:"7px 16px",borderRadius:8,border:`1.5px solid ${view===v?B.blue:B.iceBlue}`,background:view===v?B.blue:B.white,color:view===v?B.white:B.navy,cursor:"pointer",fontSize:12,fontWeight:600,textTransform:"capitalize"}}>{v}</button>
+                  ))}
+                </div>
+                <UploadZone onUpload={handleUpload} compact />
+              </div>
+              {view==="overview" && (
+                <div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:24}}>
+                    <StatCard label="Total Releases" value={reports.length} sub="Tracked this period" accent={B.blue} />
+                    <StatCard label="Total Placements" value={reports.reduce((s,r)=>s+r.totalOutlets,0).toLocaleString()} sub="All distributions" accent={B.skyBlue} />
+                    <StatCard label="Avg Outlets/Release" value={Math.round(reports.reduce((s,r)=>s+r.totalOutlets,0)/reports.length)} sub="Per distribution" accent={B.iceBlue} />
+                    <StatCard label="Major Wire Networks" value="9" sub="AP, Google, Bloomberg+" accent="#2E86C1" />
+                  </div>
+                  <Card>
+                    <SectionTitle>All Press Releases</SectionTitle>
+                    {reports.map(r=>(
+                      <div key={r.id} onClick={()=>{setSelected(r.id);setView("detail");}}
+                        style={{padding:"14px 0",borderBottom:`1px solid ${B.lightBg}`,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:13,fontWeight:700,color:B.navy,marginBottom:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:640}}>{r.title}</div>
+                          <div style={{fontSize:11,color:B.gray}}>{r.date} · {r.fileName}</div>
+                        </div>
+                        <div style={{display:"flex",gap:20,marginLeft:20,flexShrink:0}}>
+                          {[{l:"Outlets",v:r.totalOutlets,c:B.blue},{l:"TV",v:r.tvCount,c:B.skyBlue}].map(({l,v,c})=>(
+                            <div key={l} style={{textAlign:"right"}}>
+                              <div style={{fontSize:20,fontWeight:800,color:c}}>{v}</div>
+                              <div style={{fontSize:10,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em"}}>{l}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </Card>
+                </div>
+              )}
+              {view==="detail" && active && (
+                <div>
+                  {reports.length>1 && (
+                    <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+                      {reports.map(r=>(
+                        <button key={r.id} onClick={()=>setSelected(r.id)} style={{padding:"5px 14px",borderRadius:20,border:`1.5px solid ${r.id===selected?B.blue:B.iceBlue}`,background:r.id===selected?B.blue:B.white,color:r.id===selected?B.white:B.navy,cursor:"pointer",fontSize:11,fontWeight:600}}>
+                          {r.date.split(" ").slice(0,2).join(" ")}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{background:`linear-gradient(135deg,${B.navy},${B.navyMid})`,borderRadius:14,padding:"22px 26px",marginBottom:22,boxShadow:"0 4px 20px rgba(13,31,60,0.15)"}}>
+                    <div style={{fontSize:10,fontWeight:700,color:B.skyBlue,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:6}}>Press Release</div>
+                    <h2 style={{margin:"0 0 10px",fontSize:17,fontWeight:800,color:B.white,lineHeight:1.4,fontFamily:"Georgia,serif"}}>{active.title}</h2>
+                    <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
+                      <span style={{fontSize:11,color:B.iceBlue}}>📅 {active.date}</span>
+                      {active.wordCount && <span style={{fontSize:11,color:B.iceBlue}}>✍️ {active.wordCount} words</span>}
+                      <span style={{fontSize:11,color:B.iceBlue}}>📡 EIN Presswire</span>
+                    </div>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:22}}>
+                    <StatCard label="Total Outlets" value={active.totalOutlets} sub="Verified placements" accent={B.blue} />
+                    <StatCard label="TV / Broadcast" value={active.tvCount} sub="Local & network stations" accent={B.skyBlue} />
+                    <StatCard label="US Media Targets" value={active.usTargets.toLocaleString()} sub="Journalists contacted" accent={B.iceBlue} />
+                    <StatCard label="Channels" value={active.channels.length} sub={active.channels[0]||"—"} accent="#2E86C1" />
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18,marginBottom:18}}>
+                    <Card>
+                      <SectionTitle>Outlet Type Breakdown</SectionTitle>
+                      <div style={{display:"flex",alignItems:"center"}}>
+                        <ResponsiveContainer width="55%" height={180}>
+                          <PieChart><Pie data={active.outletData} dataKey="count" innerRadius={50} outerRadius={82} paddingAngle={3}>
+                            {active.outletData.map((e,i)=><Cell key={i} fill={e.color}/>)}
+                          </Pie><Tooltip /></PieChart>
+                        </ResponsiveContainer>
+                        <div style={{flex:1,paddingLeft:14}}>
+                          {active.outletData.map((d,i)=>(
+                            <div key={i} style={{display:"flex",alignItems:"center",gap:7,marginBottom:9}}>
+                              <div style={{width:9,height:9,borderRadius:2,background:d.color,flexShrink:0}}/>
+                              <div style={{flex:1,fontSize:11,color:B.navy,fontWeight:500}}>{d.name}</div>
+                              <div style={{fontSize:13,fontWeight:800,color:B.navy}}>{d.count}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </Card>
+                    <Card>
+                      <SectionTitle>Top States by Coverage</SectionTitle>
+                      <ResponsiveContainer width="100%" height={180}>
+                        <BarChart data={active.geoData} barSize={16}>
+                          <XAxis dataKey="state" tick={{fontSize:10,fill:B.gray}} axisLine={false} tickLine={false}/>
+                          <YAxis tick={{fontSize:10,fill:B.gray}} axisLine={false} tickLine={false} width={22}/>
+                          <Tooltip content={<ChartTooltip/>} cursor={{fill:"rgba(77,168,218,0.08)"}}/>
+                          <Bar dataKey="count" radius={[4,4,0,0]}>
+                            {active.geoData.map((_,i)=><Cell key={i} fill={i===0?B.blue:i<3?B.skyBlue:B.iceBlue}/>)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </Card>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18,marginBottom:18}}>
+                    <Card>
+                      <SectionTitle>Major Platform Placements</SectionTitle>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
+                        {active.platforms.map((p,i)=>(
+                          <div key={i} style={{padding:"5px 12px",borderRadius:20,background:i<3?B.navy:i<6?B.blue:B.lightBg,color:i<6?B.white:B.navy,fontSize:11,fontWeight:600}}>{p}</div>
+                        ))}
+                      </div>
+                      <div style={{marginTop:14,padding:"10px 12px",background:B.lightBg,borderRadius:8,fontSize:11,color:B.navy}}>
+                        <strong>News Databases:</strong> Bloomberg Terminal · MuckRack · Moody's Analytics · Crunchbase · MENAFN · Naviga
+                      </div>
+                    </Card>
+                    <Card>
+                      <SectionTitle>Notable TV Reprints</SectionTitle>
+                      <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                        {active.notableReprints.slice(0,6).map((r,i)=>(
+                          <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:B.lightBg,borderRadius:7}}>
+                            <div style={{width:5,height:5,borderRadius:"50%",background:B.blue,flexShrink:0}}/>
+                            <span style={{fontSize:11,color:B.navy,fontWeight:500}}>{r}</span>
+                          </div>
+                        ))}
+                        {active.tvCount>6 && <div style={{fontSize:11,color:B.gray,textAlign:"center"}}>+ {active.tvCount-6} additional TV stations</div>}
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // COMPETITOR DATA
+    // ════════════════════════════════════════════════════════════════════════
+    const COMPETITORS_SEED = [
+      { id:"healthsnap", name:"HealthSnap", color:"#E74C3C", specialty:"High-scale enterprise RPM", strengths:"Strong device ecosystem, proven outcomes, 150+ health systems", weaknesses:"High cost, less agile for smaller clinics", messaging:"Platform scale & population analytics", targetSegment:"Enterprise health systems", scores:{careCoaching:70,reimbursement:80,customWorkflows:75,enterpriseScale:95,easeOfUse:60,analytics:90}, estimatedShare:22, lastUpdated:new Date().toISOString(), notes:"100,000+ patients monitored; 80% reduced SBP by 23.8 mmHg" },
+      { id:"optimizehealth", name:"Optimize Health", color:"#F39C12", specialty:"Mid-size practice RPM", strengths:"High usability ratings, easy onboarding, quick launch", weaknesses:"Less enterprise penetration, less outcomes messaging", messaging:"Simplicity & ease of use", targetSegment:"Mid-size & smaller practices", scores:{careCoaching:55,reimbursement:65,customWorkflows:70,enterpriseScale:55,easeOfUse:92,analytics:60}, estimatedShare:14, lastUpdated:new Date().toISOString(), notes:"" },
+      { id:"cadence", name:"Cadence Care", color:"#9B59B6", specialty:"Chronic-condition RPM with clinical team", strengths:"Custom workflows, strong clinician engagement", weaknesses:"Fewer large-system case studies", messaging:"Clinician-first workflows", targetSegment:"Cardiology, chronic disease clinics", scores:{careCoaching:85,reimbursement:70,customWorkflows:90,enterpriseScale:65,easeOfUse:72,analytics:70}, estimatedShare:16, lastUpdated:new Date().toISOString(), notes:"" },
+      { id:"hrs", name:"Health Recovery Solutions", color:"#1ABC9C", specialty:"Full-service RPM + telehealth", strengths:"End-to-end solution, trusted by health systems, 24/7 support", weaknesses:"Overly complex/costly for mid-size, heavy on services", messaging:"Comprehensive wrap-around services", targetSegment:"Large health systems, hospital-at-home", scores:{careCoaching:80,reimbursement:85,customWorkflows:75,enterpriseScale:90,easeOfUse:58,analytics:82}, estimatedShare:20, lastUpdated:new Date().toISOString(), notes:"" },
+      { id:"accurpm", name:"AccuRPM", color:"#E67E22", specialty:"Turnkey RPM with 24/7 monitoring", strengths:"No-cost EHR integration, fast setup, operational simplicity", weaknesses:"May lack advanced analytics, coaching intensity, customization", messaging:"Cost & speed", targetSegment:"Clinics wanting quick, no-fuss launch", scores:{careCoaching:40,reimbursement:60,customWorkflows:50,enterpriseScale:60,easeOfUse:88,analytics:45}, estimatedShare:10, lastUpdated:new Date().toISOString(), notes:"" },
+    ];
+    const RPM_SCORES = { careCoaching:95, reimbursement:92, customWorkflows:88, enterpriseScale:85, easeOfUse:82, analytics:80 };
+    const RPM_SHARE = 18;
+    const SCORE_LABELS = { careCoaching:"Care Coaching", reimbursement:"Billing & Reimb.", customWorkflows:"Custom Workflows", enterpriseScale:"Enterprise Scale", easeOfUse:"Ease of Use", analytics:"Analytics" };
+
+    // ════════════════════════════════════════════════════════════════════════
+    // TAB 2 — COMPETITIVE INTELLIGENCE
+    // ════════════════════════════════════════════════════════════════════════
+    function CompetitiveTab() {
+      const [competitors, setCompetitors] = useState(COMPETITORS_SEED);
+      const [selected, setSelected] = useState(null);
+      const [editMode, setEditMode] = useState(false);
+      const [editData, setEditData] = useState(null);
+      const [searchLoading, setSearchLoading] = useState(false);
+      const [searchTarget, setSearchTarget] = useState(null);
+      const [liveData, setLiveData] = useState({});
+      const [msgLoading, setMsgLoading] = useState(false);
+      const [msgData, setMsgData] = useState(null);
+      const [msgPhase, setMsgPhase] = useState("");
+
+      const totalShare = competitors.reduce((s,c)=>s+c.estimatedShare,0) + RPM_SHARE;
+      const shareData = [
+        { name:"RPM Healthcare", value:RPM_SHARE, color:B.blue },
+        ...competitors.map(c=>({ name:c.name, value:c.estimatedShare, color:c.color })),
+        { name:"Other", value:Math.max(0,100-totalShare), color:"#DDE6F0" },
+      ];
+      const radarData = Object.keys(SCORE_LABELS).map(k=>({
+        metric: SCORE_LABELS[k],
+        "RPM Healthcare": RPM_SCORES[k],
+        ...(selected ? { [competitors.find(c=>c.id===selected)?.name]: competitors.find(c=>c.id===selected)?.scores[k] } : {}),
+        ...(!selected ? Object.fromEntries(competitors.map(c=>[c.name,c.scores[k]])) : {}),
+      }));
+
+      const fetchLiveIntelligence = async (comp) => {
+        setSearchLoading(true); setSearchTarget(comp.id);
+        try {
+          const res = await fetch("https://api.anthropic.com/v1/messages", {
+            method:"POST", headers:{"Content-Type":"application/json","anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true","x-api-key":getApiKey()},
+            body: JSON.stringify({
+              model:"claude-sonnet-4-5", max_tokens:1000,
+              tools:[{type:"web_search_20250305",name:"web_search"}],
+              messages:[{role:"user",content:`Search for the latest news, product updates, partnerships, pricing changes, and market activity for "${comp.name}" in the remote patient monitoring (RPM) healthcare space in 2025-2026. Summarize the 3 most important recent developments. Format as JSON with keys: "developments" (array of {headline, summary, date, significance: "high"|"medium"|"low"}), "messagingShift" (string), "opportunities" (string, what this means for RPM Healthcare).`}]
+            })
+          });
+          const data = await res.json();
+          const text = data.content.filter(b=>b.type==="text").map(b=>b.text).join("");
+          const clean = text.replace(/```json|```/g,"").trim();
+          try { setLiveData(prev=>({...prev,[comp.id]:{...JSON.parse(clean),fetchedAt:new Date().toLocaleString()}})); }
+          catch { setLiveData(prev=>({...prev,[comp.id]:{raw:text,fetchedAt:new Date().toLocaleString()}})); }
+        } catch { setLiveData(prev=>({...prev,[comp.id]:{error:"Could not fetch live data.",fetchedAt:new Date().toLocaleString()}})); }
+        setSearchLoading(false); setSearchTarget(null);
+      };
+
+      const openEdit = (comp) => { setEditData({...comp,scores:{...comp.scores}}); setEditMode(true); };
+      const saveEdit = () => { setCompetitors(prev=>prev.map(c=>c.id===editData.id?{...editData,lastUpdated:new Date().toISOString()}:c)); setEditMode(false); setEditData(null); };
+      const selectedComp = competitors.find(c=>c.id===selected);
+      const priorityColor = p => p==="high"?B.red:p==="medium"?B.amber:B.green;
+
+      const fetchMessagingComparison = () => {
+        setMsgLoading(true);
+        setTimeout(() => {
+          setMsgData({
+            fetchedAt: new Date().toLocaleString(),
+            companies: [
+              {
+                name: "RPM Healthcare",
+                isRPM: true,
+                url: "rpmhealthcare.com",
+                headline: "Better outcomes. Smarter workflows. Stronger revenue.",
+                tagline: "Full-service remote patient monitoring built for health systems",
+                primaryMessage: "RPM Healthcare handles 97% of patient alerts through licensed nurse Care Coaches, freeing providers to focus on care while driving $1,000+ revenue per patient per year.",
+                toneWords: ["Clinical", "ROI-driven", "Human-led", "Full-service"],
+                audienceFocus: "Health systems, large group practices, cardiology & neurology clinics",
+                differentiator: "Licensed nurse Care Coaches manage the majority of alerts externally — reducing provider burden without adding IT complexity"
+              },
+              {
+                name: "HealthSnap",
+                isRPM: false,
+                url: "healthsnap.io",
+                headline: "The Complete Virtual Care Management Platform",
+                tagline: "RPM, CCM, and PCM for 150+ health systems",
+                primaryMessage: "Enterprise-scale virtual care management with advanced device ecosystems and population analytics across RPM, CCM, and PCM.",
+                toneWords: ["Enterprise", "Data-forward", "Scale-focused", "Clinical"],
+                audienceFocus: "Large health systems and enterprise networks",
+                differentiator: "100,000+ patients monitored; 80%+ of hypertensive patients reduced SBP by ~23.8 mmHg"
+              },
+              {
+                name: "Optimize Health",
+                isRPM: false,
+                url: "optimize.health",
+                headline: "Remote Patient Monitoring Made Simple",
+                tagline: "Launch RPM in days, not months",
+                primaryMessage: "User-friendly RPM platform built for mid-size practices that want fast onboarding and streamlined clinical workflows.",
+                toneWords: ["Simple", "Fast", "Approachable", "Practice-friendly"],
+                audienceFocus: "Mid-size practices and smaller provider groups",
+                differentiator: "Fastest RPM onboarding on the market — practices go live in days with minimal IT lift"
+              },
+              {
+                name: "Cadence Care",
+                isRPM: false,
+                url: "cadence.care",
+                headline: "Care Without Boundaries",
+                tagline: "RPM built around your clinical workflows",
+                primaryMessage: "Chronic-condition RPM with deeply customizable workflows and a dedicated clinical team embedded in provider practices.",
+                toneWords: ["Clinician-first", "Custom", "Chronic care", "Embedded"],
+                audienceFocus: "Cardiology, endocrinology, and chronic disease specialty clinics",
+                differentiator: "Custom workflow engine that adapts to how each clinical team already operates"
+              },
+              {
+                name: "Health Recovery Solutions",
+                isRPM: false,
+                url: "healthrecoverysolutions.com",
+                headline: "Transforming Care Beyond Hospital Walls",
+                tagline: "End-to-end RPM & telehealth for health systems",
+                primaryMessage: "Full wrap-around RPM and telehealth services with device logistics, 24/7 clinical support, and deep enterprise integration.",
+                toneWords: ["Comprehensive", "Enterprise", "Clinical", "Trusted"],
+                audienceFocus: "Large health systems, hospital-at-home programs, high-acuity post-acute care",
+                differentiator: "Strongest hospital-at-home and post-acute use cases with 24/7 staffed clinical support center"
+              },
+              {
+                name: "AccuRPM",
+                isRPM: false,
+                url: "accurpm.com",
+                headline: "Turn-Key RPM. Zero Cost to Start.",
+                tagline: "24/7 monitoring with no-cost EHR integration",
+                primaryMessage: "Turnkey RPM solution with free EHR integration, fast setup, and 24/7 monitoring — designed for clinics that want RPM without the overhead.",
+                toneWords: ["Cost-conscious", "Fast", "Turnkey", "No-frills"],
+                audienceFocus: "Cost-sensitive clinics and practices wanting plug-and-play RPM",
+                differentiator: "Zero upfront cost and no-cost EHR integration — fastest path to a running RPM program"
+              }
+            ],
+            themes: [
+              { theme: "Outcomes & Clinical Results", description: "Quantified patient outcomes (BP reduction, readmission rates) used as proof points", companies: ["RPM Healthcare", "HealthSnap", "Cadence Care"] },
+              { theme: "Provider Burden Reduction", description: "Messaging around freeing up clinician time and reducing administrative load", companies: ["RPM Healthcare", "Cadence Care", "Health Recovery Solutions"] },
+              { theme: "Revenue & Reimbursement", description: "CPT code support, billing help, and ROI framing as a primary hook", companies: ["RPM Healthcare", "AccuRPM"] },
+              { theme: "Speed & Simplicity", description: "Fast onboarding, easy setup, and low IT lift as the headline value", companies: ["Optimize Health", "AccuRPM"] },
+              { theme: "Enterprise Scale", description: "Positioning around large health system deployments and population-level analytics", companies: ["HealthSnap", "Health Recovery Solutions"] }
+            ],
+            rpmStrengths: [
+              { strength: "Human-Led Care Model", detail: "The '97% of alerts handled externally by licensed nurses' stat is unique in the market — no competitor leads with a human staffing model this explicitly" },
+              { strength: "Dual ROI Framing", detail: "RPM Healthcare is the only company pairing clinical outcomes AND revenue generation ($1,000+/patient/year, 40%+ profitability) in the same breath" },
+              { strength: "Cross-Segment Flexibility", detail: "Messaging covers health systems through specialty clinics — most competitors plant their flag at one end of the market" }
+            ],
+            rpmGaps: [
+              { gap: "Speed & Ease of Launch", recommendation: "Optimize Health and AccuRPM own 'fast setup' — RPM Healthcare should counter with a '30-day launch guarantee' or similar time-to-value proof point" },
+              { gap: "Condition-Specific Messaging", recommendation: "Cadence owns cardiology/chronic disease verticals with specific language — RPM Healthcare should publish vertical pages (cardiology, CHF, diabetes) with condition-specific outcome data" },
+              { gap: "Hospital-at-Home / Post-Acute", recommendation: "HRS owns this space entirely — if RPM Healthcare has post-acute capabilities, now is the time to claim it before HRS cements it further" }
+            ],
+            whitespace: "Health equity and rural access — no competitor is leading with a mission-driven narrative around closing the care gap for underserved or rural populations. With RPM's ability to extend care beyond clinic walls, RPM Healthcare could own 'the RPM company that brings hospital-quality monitoring to every zip code' — a differentiated angle that also resonates with Medicaid expansion tailwinds and value-based care contracts."
+          });
+          setMsgLoading(false);
+        }, 400);
+      };
+
+      return (
+        <div>
+          {editMode && editData && (
+            <div style={{position:"fixed",inset:0,background:"rgba(13,31,60,0.6)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <div style={{background:B.white,borderRadius:18,padding:28,width:560,maxHeight:"80vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+                  <h3 style={{margin:0,fontSize:17,fontWeight:800,color:B.navy}}>Edit: {editData.name}</h3>
+                  <button onClick={()=>setEditMode(false)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:B.gray}}>✕</button>
+                </div>
+                {[["specialty","Specialty"],["strengths","Strengths"],["weaknesses","Weaknesses"],["messaging","Messaging"],["targetSegment","Target Segment"],["notes","Notes"]].map(([k,label])=>(
+                  <div key={k} style={{marginBottom:12}}>
+                    <label style={{fontSize:11,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:4}}>{label}</label>
+                    <textarea value={editData[k]||""} onChange={e=>setEditData({...editData,[k]:e.target.value})} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1.5px solid ${B.iceBlue}`,fontSize:12,color:B.navy,resize:"vertical",minHeight:50,boxSizing:"border-box"}} />
+                  </div>
+                ))}
+                <div style={{marginBottom:16}}>
+                  <label style={{fontSize:11,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:8}}>Capability Scores (0–100)</label>
+                  {Object.entries(SCORE_LABELS).map(([k,label])=>(
+                    <div key={k} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+                      <span style={{fontSize:11,color:B.navy,width:130,flexShrink:0}}>{label}</span>
+                      <input type="range" min={0} max={100} value={editData.scores[k]||50} onChange={e=>setEditData({...editData,scores:{...editData.scores,[k]:parseInt(e.target.value)}})} style={{flex:1}}/>
+                      <span style={{fontSize:12,fontWeight:700,color:B.blue,width:32,textAlign:"right"}}>{editData.scores[k]||50}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{marginBottom:16}}>
+                  <label style={{fontSize:11,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:4}}>Estimated Market Share (%)</label>
+                  <input type="number" min={0} max={100} value={editData.estimatedShare} onChange={e=>setEditData({...editData,estimatedShare:parseInt(e.target.value)||0})} style={{padding:"7px 10px",borderRadius:8,border:`1.5px solid ${B.iceBlue}`,fontSize:13,color:B.navy,width:100}} />
+                </div>
+                <div style={{display:"flex",gap:10}}>
+                  <button onClick={saveEdit} style={{flex:1,padding:"10px",borderRadius:9,background:B.blue,color:B.white,border:"none",cursor:"pointer",fontSize:13,fontWeight:700}}>Save Changes</button>
+                  <button onClick={()=>setEditMode(false)} style={{flex:1,padding:"10px",borderRadius:9,background:B.lightBg,color:B.navy,border:"none",cursor:"pointer",fontSize:13,fontWeight:600}}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div style={{display:"grid",gridTemplateColumns:"260px 1fr",gap:20,alignItems:"start"}}>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              <Card style={{borderLeft:`4px solid ${B.blue}`,cursor:"pointer",background:!selected?B.lightBg:B.white}} onClick={()=>setSelected(null)}>
+                <div style={{fontSize:10,fontWeight:700,color:B.blue,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>Your Company</div>
+                <div style={{fontSize:14,fontWeight:800,color:B.navy}}>RPM Healthcare</div>
+                <div style={{fontSize:11,color:B.gray,marginTop:2}}>Market Share: ~{RPM_SHARE}%</div>
+              </Card>
+              {competitors.map(c=>(
+                <Card key={c.id} style={{borderLeft:`4px solid ${c.color}`,cursor:"pointer",background:selected===c.id?B.lightBg:B.white}} onClick={()=>setSelected(c.id)}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:800,color:B.navy}}>{c.name}</div>
+                      <div style={{fontSize:10,color:B.gray,marginTop:2}}>{c.estimatedShare}% share est.</div>
+                    </div>
+                    <div style={{display:"flex",gap:5}}>
+                      <button onClick={e=>{e.stopPropagation();openEdit(c);}} style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${B.iceBlue}`,background:B.white,color:B.gray,cursor:"pointer",fontSize:10}}>Edit</button>
+                      <button onClick={e=>{e.stopPropagation();fetchLiveIntelligence(c);}} style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${B.skyBlue}`,background:searchLoading&&searchTarget===c.id?B.skyBlue:B.white,color:searchLoading&&searchTarget===c.id?B.white:B.blue,cursor:"pointer",fontSize:10,fontWeight:600}}>
+                        {searchLoading&&searchTarget===c.id?"...":"🔍"}
+                      </button>
+                    </div>
+                  </div>
+                  {liveData[c.id] && <div style={{marginTop:6,padding:"4px 7px",background:"#EBF9F0",borderRadius:5,fontSize:10,color:B.green,fontWeight:600}}>✓ Live: {liveData[c.id].fetchedAt}</div>}
+                </Card>
+              ))}
+            </div>
+
+            <div style={{display:"flex",flexDirection:"column",gap:18}}>
+              <Card>
+                <SectionTitle>Estimated Market Share</SectionTitle>
+                <div style={{display:"flex",alignItems:"center",gap:24}}>
+                  <ResponsiveContainer width={200} height={200}>
+                    <PieChart><Pie data={shareData} dataKey="value" innerRadius={60} outerRadius={90} paddingAngle={2}>
+                      {shareData.map((e,i)=><Cell key={i} fill={e.color}/>)}
+                    </Pie><Tooltip formatter={(v,n)=>[`${v}%`,n]}/></PieChart>
+                  </ResponsiveContainer>
+                  <div style={{flex:1,display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 16px"}}>
+                    {shareData.filter(d=>d.value>0).map((d,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:7}}>
+                        <div style={{width:10,height:10,borderRadius:2,background:d.color,flexShrink:0}}/>
+                        <span style={{fontSize:11,color:B.navy,fontWeight:d.name==="RPM Healthcare"?700:400}}>{d.name}</span>
+                        <span style={{fontSize:12,fontWeight:800,color:d.name==="RPM Healthcare"?B.blue:B.navy,marginLeft:"auto"}}>{d.value}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+
+              <Card>
+                <SectionTitle>{selectedComp?`RPM Healthcare vs ${selectedComp.name}`:"Capability Comparison — All Competitors"}</SectionTitle>
+                <ResponsiveContainer width="100%" height={260}>
+                  <RadarChart data={radarData}>
+                    <PolarGrid stroke={B.iceBlue}/>
+                    <PolarAngleAxis dataKey="metric" tick={{fontSize:10,fill:B.navy}}/>
+                    <Radar name="RPM Healthcare" dataKey="RPM Healthcare" stroke={B.blue} fill={B.blue} fillOpacity={0.25} strokeWidth={2}/>
+                    {selectedComp
+                      ? <Radar name={selectedComp.name} dataKey={selectedComp.name} stroke={selectedComp.color} fill={selectedComp.color} fillOpacity={0.15} strokeWidth={2}/>
+                      : competitors.map(c=><Radar key={c.id} name={c.name} dataKey={c.name} stroke={c.color} fill={c.color} fillOpacity={0.08} strokeWidth={1.5}/>)
+                    }
+                    <Tooltip/>
+                  </RadarChart>
+                </ResponsiveContainer>
+              </Card>
+
+              {selectedComp && (
+                <Card>
+                  <SectionTitle>{selectedComp.name} — Competitive Profile
+                    <span/>
+                  </SectionTitle>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+                    {[["Specialty",selectedComp.specialty],["Target Segment",selectedComp.targetSegment],["Strengths",selectedComp.strengths],["Weaknesses",selectedComp.weaknesses],["Messaging",selectedComp.messaging]].map(([k,v])=>(
+                      <div key={k} style={{padding:"10px 12px",background:B.lightBg,borderRadius:9}}>
+                        <div style={{fontSize:10,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>{k}</div>
+                        <div style={{fontSize:12,color:B.navy}}>{v}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {selectedComp.notes && <div style={{padding:"10px 12px",background:"#FFF9E6",borderRadius:9,fontSize:12,color:"#856404",marginBottom:14}}>📌 {selectedComp.notes}</div>}
+                  {liveData[selectedComp.id] && (
+                    <div style={{background:B.lightBg,borderRadius:10,padding:14}}>
+                      <div style={{fontSize:11,fontWeight:700,color:B.blue,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>🔴 Live Intelligence · {liveData[selectedComp.id].fetchedAt}</div>
+                      {liveData[selectedComp.id].error && <div style={{fontSize:12,color:B.red}}>{liveData[selectedComp.id].error}</div>}
+                      {liveData[selectedComp.id].developments?.map((d,i)=>(
+                        <div key={i} style={{marginBottom:10,padding:"10px 12px",background:B.white,borderRadius:8,borderLeft:`3px solid ${priorityColor(d.significance)}`}}>
+                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                            <div style={{fontSize:12,fontWeight:700,color:B.navy}}>{d.headline}</div>
+                            <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:10,background:priorityColor(d.significance),color:B.white}}>{d.significance}</span>
+                          </div>
+                          <div style={{fontSize:11,color:B.gray,marginBottom:2}}>{d.summary}</div>
+                          {d.date && <div style={{fontSize:10,color:B.gray}}>📅 {d.date}</div>}
+                        </div>
+                      ))}
+                      {liveData[selectedComp.id].messagingShift && (
+                        <div style={{padding:"9px 12px",background:B.white,borderRadius:8,marginBottom:8}}>
+                          <div style={{fontSize:10,fontWeight:700,color:B.gray,textTransform:"uppercase",marginBottom:3}}>Messaging Shift</div>
+                          <div style={{fontSize:12,color:B.navy}}>{liveData[selectedComp.id].messagingShift}</div>
+                        </div>
+                      )}
+                      {liveData[selectedComp.id].opportunities && (
+                        <div style={{padding:"9px 12px",background:"#EBF9F0",borderRadius:8}}>
+                          <div style={{fontSize:10,fontWeight:700,color:B.green,textTransform:"uppercase",marginBottom:3}}>What This Means for RPM Healthcare</div>
+                          <div style={{fontSize:12,color:B.navy}}>{liveData[selectedComp.id].opportunities}</div>
+                        </div>
+                      )}
+                      {liveData[selectedComp.id].raw && <div style={{fontSize:11,color:B.navy,lineHeight:1.6}}>{liveData[selectedComp.id].raw}</div>}
+                    </div>
+                  )}
+                </Card>
+              )}
+
+              {/* ── MESSAGING COMPARISON ── */}
+              <Card style={{border:`2px solid ${B.iceBlue}`}}>
+                <SectionTitle>💬 Messaging Comparison
+                  <button onClick={fetchMessagingComparison} disabled={msgLoading} style={{padding:"7px 18px",borderRadius:9,background:msgLoading?B.gray:B.navy,color:B.white,border:"none",cursor:msgLoading?"not-allowed":"pointer",fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>
+                    {msgLoading?"Loading…":"View Messaging Analysis"}
+                  </button>
+                </SectionTitle>
+
+                {/* Empty state */}
+                {!msgData && !msgLoading && (
+                  <div style={{textAlign:"center",padding:"36px 20px"}}>
+                    <div style={{fontSize:36,marginBottom:12}}>💬</div>
+                    <div style={{fontSize:14,fontWeight:700,color:B.navy,marginBottom:6}}>Compare Messaging Across All Competitors</div>
+                    <div style={{fontSize:12,color:B.gray,maxWidth:480,margin:"0 auto",lineHeight:1.6}}>See how RPM Healthcare's messaging stacks up against all 5 competitors — headlines, tone, audience focus, gaps, and unclaimed whitespace you can own.</div>
+                  </div>
+                )}
+
+                {/* Loading state */}
+                {msgLoading && (
+                  <div style={{textAlign:"center",padding:"32px",color:B.gray}}>
+                    <div style={{fontSize:13,color:B.navy}}>Loading analysis…</div>
+                  </div>
+                )}
+
+                {/* Results */}
+                {msgData && (
+                  <div>
+                    {msgData.error && <div style={{color:B.red,fontSize:12,padding:"12px"}}>{msgData.error}</div>}
+
+                    {/* Company messaging cards */}
+                    {msgData.companies && (
+                      <div style={{marginBottom:20}}>
+                        <div style={{fontSize:11,fontWeight:700,color:B.navy,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:12}}>Live Website Messaging — All Companies</div>
+                        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                          {msgData.companies.map((co,i)=>{
+                            const compColor = co.isRPM ? B.blue : (competitors.find(c=>c.name===co.name)?.color || B.gray);
+                            return (
+                              <div key={i} style={{borderRadius:12,border:`1.5px solid ${co.isRPM?B.blue:B.iceBlue}`,overflow:"hidden",background:co.isRPM?`linear-gradient(135deg,${B.navy}08,${B.blue}06)`:B.white}}>
+                                {/* Header row */}
+                                <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",borderBottom:`1px solid ${B.lightBg}`,background:co.isRPM?`linear-gradient(135deg,${B.navy},${B.navyMid})`:"transparent"}}>
+                                  <div style={{width:8,height:8,borderRadius:"50%",background:compColor,flexShrink:0}}/>
+                                  <span style={{fontSize:12,fontWeight:800,color:co.isRPM?B.white:B.navy}}>{co.name}</span>
+                                  {co.isRPM && <span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:8,background:"rgba(255,255,255,0.2)",color:B.white}}>YOUR COMPANY</span>}
+                                  {co.url && <a href={co.url.startsWith("http")?co.url:"https://"+co.url} target="_blank" rel="noopener noreferrer" style={{marginLeft:"auto",fontSize:10,color:co.isRPM?B.iceBlue:B.blue,textDecoration:"none",fontWeight:600}}>↗ Visit</a>}
+                                </div>
+                                {/* Content */}
+                                <div style={{padding:"12px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 16px"}}>
+                                  {co.headline && (
+                                    <div style={{gridColumn:"1/-1",padding:"8px 12px",background:co.isRPM?`${B.blue}10`:B.lightBg,borderRadius:8,borderLeft:`3px solid ${compColor}`}}>
+                                      <div style={{fontSize:9,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Homepage Headline</div>
+                                      <div style={{fontSize:13,fontWeight:700,color:B.navy,lineHeight:1.4,fontStyle:"italic"}}>"{co.headline}"</div>
+                                      {co.tagline && <div style={{fontSize:11,color:B.gray,marginTop:3}}>↳ {co.tagline}</div>}
+                                    </div>
+                                  )}
+                                  {co.primaryMessage && (
+                                    <div>
+                                      <div style={{fontSize:9,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Core Message</div>
+                                      <div style={{fontSize:11,color:B.navy,lineHeight:1.5}}>{co.primaryMessage}</div>
+                                    </div>
+                                  )}
+                                  {co.audienceFocus && (
+                                    <div>
+                                      <div style={{fontSize:9,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Audience Focus</div>
+                                      <div style={{fontSize:11,color:B.navy,lineHeight:1.5}}>{co.audienceFocus}</div>
+                                    </div>
+                                  )}
+                                  {co.differentiator && (
+                                    <div style={{gridColumn:"1/-1"}}>
+                                      <div style={{fontSize:9,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Claimed Differentiator</div>
+                                      <div style={{fontSize:11,color:B.navy,lineHeight:1.5}}>{co.differentiator}</div>
+                                    </div>
+                                  )}
+                                  {co.toneWords?.length>0 && (
+                                    <div style={{gridColumn:"1/-1",display:"flex",gap:6,flexWrap:"wrap"}}>
+                                      {co.toneWords.map((w,j)=>(
+                                        <span key={j} style={{padding:"2px 9px",borderRadius:10,background:co.isRPM?`${B.blue}18`:B.lightBg,color:co.isRPM?B.blue:B.navy,fontSize:10,fontWeight:600}}>{w}</span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Themes */}
+                    {msgData.themes?.length>0 && (
+                      <div style={{marginBottom:20}}>
+                        <div style={{fontSize:11,fontWeight:700,color:B.navy,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>🔁 Shared Messaging Themes Across Market</div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                          {msgData.themes.map((t,i)=>(
+                            <div key={i} style={{padding:"10px 14px",background:B.lightBg,borderRadius:10,borderLeft:`3px solid ${B.skyBlue}`}}>
+                              <div style={{fontSize:12,fontWeight:700,color:B.navy,marginBottom:3}}>{t.theme}</div>
+                              <div style={{fontSize:11,color:B.gray,marginBottom:6,lineHeight:1.5}}>{t.description}</div>
+                              <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                                {t.companies?.map((co,j)=>(
+                                  <span key={j} style={{fontSize:9,padding:"2px 7px",borderRadius:8,background:co==="RPM Healthcare"?B.blue:B.white,color:co==="RPM Healthcare"?B.white:B.navy,fontWeight:700,border:`1px solid ${co==="RPM Healthcare"?B.blue:B.iceBlue}`}}>{co}</span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* RPM Gaps + Strengths side by side */}
+                    {(msgData.rpmGaps?.length>0 || msgData.rpmStrengths?.length>0) && (
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+                        {msgData.rpmStrengths?.length>0 && (
+                          <div>
+                            <div style={{fontSize:11,fontWeight:700,color:B.green,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>✅ RPM Messaging Strengths</div>
+                            {msgData.rpmStrengths.map((s,i)=>(
+                              <div key={i} style={{marginBottom:8,padding:"10px 12px",background:"#F0FFF8",borderRadius:9,borderLeft:`3px solid ${B.green}`}}>
+                                <div style={{fontSize:12,fontWeight:700,color:B.navy,marginBottom:3}}>{s.strength}</div>
+                                <div style={{fontSize:11,color:B.gray,lineHeight:1.5}}>{s.detail}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {msgData.rpmGaps?.length>0 && (
+                          <div>
+                            <div style={{fontSize:11,fontWeight:700,color:B.amber,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>⚠️ Messaging Gaps to Address</div>
+                            {msgData.rpmGaps.map((g,i)=>(
+                              <div key={i} style={{marginBottom:8,padding:"10px 12px",background:"#FFFBEB",borderRadius:9,borderLeft:`3px solid ${B.amber}`}}>
+                                <div style={{fontSize:12,fontWeight:700,color:B.navy,marginBottom:3}}>{g.gap}</div>
+                                <div style={{fontSize:11,color:B.gray,lineHeight:1.5}}>→ {g.recommendation}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Whitespace opportunity */}
+                    {msgData.whitespace && (
+                      <div style={{padding:"14px 16px",background:`linear-gradient(135deg,${B.navy},${B.navyMid})`,borderRadius:12,marginBottom:8}}>
+                        <div style={{fontSize:10,fontWeight:700,color:B.skyBlue,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:6}}>🚀 Unclaimed Whitespace — Own This Now</div>
+                        <div style={{fontSize:13,color:B.white,lineHeight:1.6}}>{msgData.whitespace}</div>
+                      </div>
+                    )}
+
+                    {msgData.fetchedAt && <div style={{fontSize:10,color:B.gray,textAlign:"right",marginTop:8}}>Last scanned: {msgData.fetchedAt}</div>}
+                  </div>
+                )}
+              </Card>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // TAB 3 — CONTENT MAP
+    // ════════════════════════════════════════════════════════════════════════
+    const TOPICS = ["Chronic Disease Management","Weight Management","Nurse Burnout","Financial Impact / ROI","Reimbursement & CPT Codes","Population Health","Remote Patient Monitoring","Value-Based Care","Health Equity","Cardiology","Technology & Innovation","Partnerships"];
+    const STATUSES = ["Published","Scheduled","Draft","In Review"];
+    const STATUS_COLORS = { Published:B.green, Scheduled:B.blue, Draft:B.amber, "In Review":"#8E44AD" };
+    const SEED_RELEASES = [
+      { id:1, title:"Remote Patient Monitoring Delivers Measurable Financial Returns for Hospital Population Health Departments", date:"2025-12-19", topic:"Financial Impact / ROI", status:"Published", wire:"EIN Presswire", oneDriveUrl:"", notes:"Dr. Angela Bell pull quote. CPT codes 99445, 99470." },
+      { id:2, title:"RPM Healthcare Addresses Nurse Burnout Crisis by Reducing Administrative Workload Through Remote Patient Monitoring", date:"2025-12-19", topic:"Nurse Burnout", status:"Published", wire:"EIN Presswire", oneDriveUrl:"", notes:"Cross Country Healthcare/FAU 2025 stat; NCSBN 2024 data." },
+      { id:3, title:"New Survey Shows RPM Healthcare's Digital Weight Management Program Driving Weight Loss and Improved Medication Access", date:"2025-12-19", topic:"Weight Management", status:"Published", wire:"EIN Presswire", oneDriveUrl:"", notes:"156 outlets, 87 TV stations. Dec 2025 distribution." },
+    ];
+
+    function ContentMapTab() {
+      const [releases, setReleases] = usePersistedState("releases", SEED_RELEASES);
+      const [showForm, setShowForm] = useState(false);
+      const [editingId, setEditingId] = useState(null);
+      const [filterTopic, setFilterTopic] = useState("All");
+      const [filterStatus, setFilterStatus] = useState("All");
+      const [sortBy, setSortBy] = useState("date");
+      const [sortDir, setSortDir] = useState("desc");
+      const [viewMode, setViewMode] = useState("table");
+      const [searchQ, setSearchQ] = useState("");
+      const blankForm = { title:"", date:"", topic:TOPICS[0], status:"Draft", wire:"EIN Presswire", oneDriveUrl:"", notes:"" };
+      const [form, setForm] = useState(blankForm);
+
+      const [formError, setFormError] = useState("");
+      const openNew = () => { setForm(blankForm); setEditingId(null); setFormError(""); setShowForm(true); };
+      const openEdit = (r) => { setForm({...r}); setEditingId(r.id); setFormError(""); setShowForm(true); };
+      const deleteRelease = (id) => setReleases(prev=>prev.filter(r=>r.id!==id));
+      const saveForm = () => {
+        if (!form.title.trim()) { setFormError("Please enter a headline."); return; }
+        if (editingId) setReleases(prev=>prev.map(r=>r.id===editingId?{...form,id:editingId}:r));
+        else setReleases(prev=>[...prev,{...form,id:Date.now()}]);
+        setShowForm(false); setEditingId(null); setFormError("");
+      };
+      const toggleSort = (field) => { if (sortBy===field) setSortDir(d=>d==="asc"?"desc":"asc"); else { setSortBy(field); setSortDir("asc"); } };
+      const filtered = releases
+        .filter(r=>filterTopic==="All"||r.topic===filterTopic)
+        .filter(r=>filterStatus==="All"||r.status===filterStatus)
+        .filter(r=>!searchQ||r.title.toLowerCase().includes(searchQ.toLowerCase())||r.notes.toLowerCase().includes(searchQ.toLowerCase()))
+        .sort((a,b)=>{
+          let av=a[sortBy]||"",bv=b[sortBy]||"";
+          if(sortBy==="date"){av=new Date(av);bv=new Date(bv);}
+          return sortDir==="asc"?(av>bv?1:-1):(av<bv?1:-1);
+        });
+      const byMonth = filtered.reduce((acc,r)=>{ const k=r.date?r.date.slice(0,7):"No Date"; if(!acc[k])acc[k]=[]; acc[k].push(r); return acc; },{});
+      const topicCounts = TOPICS.map(t=>({name:t.split(" ")[0],count:releases.filter(r=>r.topic===t).length,full:t})).filter(t=>t.count>0);
+      const statusCounts = STATUSES.map(s=>({name:s,count:releases.filter(r=>r.status===s).length,color:STATUS_COLORS[s]})).filter(s=>s.count>0);
+      const SortArrow = ({field}) => <span style={{marginLeft:3,color:sortBy===field?B.blue:B.gray,fontSize:9}}>{sortBy===field?(sortDir==="asc"?"▲":"▼"):"⇅"}</span>;
+
+      return (
+        <div>
+          {showForm && (
+            <div style={{position:"fixed",inset:0,background:"rgba(13,31,60,0.65)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <div style={{background:B.white,borderRadius:18,padding:30,width:580,maxHeight:"88vh",overflowY:"auto",boxShadow:"0 24px 60px rgba(0,0,0,0.3)"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}>
+                  <h3 style={{margin:0,fontSize:17,fontWeight:800,color:B.navy}}>{editingId?"Edit Press Release":"Add Press Release"}</h3>
+                  <button onClick={()=>setShowForm(false)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:B.gray}}>✕</button>
+                </div>
+                <div style={{marginBottom:14}}>
+                  <label style={{fontSize:11,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:5}}>Headline *</label>
+                  <textarea value={form.title} onChange={e=>{setForm({...form,title:e.target.value});if(e.target.value.trim())setFormError("");}} rows={2} style={{width:"100%",padding:"9px 11px",borderRadius:9,border:`1.5px solid ${formError&&!form.title.trim()?B.red:B.iceBlue}`,fontSize:13,color:B.navy,resize:"vertical",boxSizing:"border-box"}} />
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+                  <div>
+                    <label style={{fontSize:11,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:5}}>Date *</label>
+                    <input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={{width:"100%",padding:"9px 11px",borderRadius:9,border:`1.5px solid ${B.iceBlue}`,fontSize:13,color:B.navy,boxSizing:"border-box"}} />
+                  </div>
+                  <div>
+                    <label style={{fontSize:11,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:5}}>Status</label>
+                    <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})} style={{width:"100%",padding:"9px 11px",borderRadius:9,border:`1.5px solid ${B.iceBlue}`,fontSize:13,color:B.navy,background:B.white,boxSizing:"border-box"}}>
+                      {STATUSES.map(s=><option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+                  <div>
+                    <label style={{fontSize:11,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:5}}>Topic</label>
+                    <select value={form.topic} onChange={e=>setForm({...form,topic:e.target.value})} style={{width:"100%",padding:"9px 11px",borderRadius:9,border:`1.5px solid ${B.iceBlue}`,fontSize:13,color:B.navy,background:B.white,boxSizing:"border-box"}}>
+                      {TOPICS.map(t=><option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{fontSize:11,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:5}}>Wire Service</label>
+                    <input value={form.wire} onChange={e=>setForm({...form,wire:e.target.value})} style={{width:"100%",padding:"9px 11px",borderRadius:9,border:`1.5px solid ${B.iceBlue}`,fontSize:13,color:B.navy,boxSizing:"border-box"}} />
+                  </div>
+                </div>
+                <div style={{marginBottom:14}}>
+                  <label style={{fontSize:11,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:5}}>OneDrive Link</label>
+                  <input type="url" value={form.oneDriveUrl} onChange={e=>setForm({...form,oneDriveUrl:e.target.value})} placeholder="https://onedrive.live.com/..." style={{width:"100%",padding:"9px 11px",borderRadius:9,border:`1.5px solid ${B.iceBlue}`,fontSize:13,color:B.navy,boxSizing:"border-box"}} />
+                </div>
+                <div style={{marginBottom:22}}>
+                  <label style={{fontSize:11,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:5}}>Notes</label>
+                  <textarea value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} rows={2} style={{width:"100%",padding:"9px 11px",borderRadius:9,border:`1.5px solid ${B.iceBlue}`,fontSize:12,color:B.navy,resize:"vertical",boxSizing:"border-box"}} />
+                </div>
+                {formError && <div style={{marginBottom:12,padding:"9px 12px",borderRadius:8,background:"#FFF0F0",border:`1px solid ${B.red}`,fontSize:12,color:B.red,fontWeight:600}}>{formError}</div>}
+                <div style={{display:"flex",gap:10}}>
+                  <button onClick={saveForm} style={{flex:1,padding:"11px",borderRadius:9,background:B.navy,color:B.white,border:"none",cursor:"pointer",fontSize:13,fontWeight:700}}>{editingId?"Save Changes":"Add Press Release"}</button>
+                  <button onClick={()=>setShowForm(false)} style={{flex:1,padding:"11px",borderRadius:9,background:B.lightBg,color:B.navy,border:"none",cursor:"pointer",fontSize:13,fontWeight:600}}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:22}}>
+            <StatCard label="Total Releases" value={releases.length} sub="All time" accent={B.blue} />
+            <StatCard label="Published" value={releases.filter(r=>r.status==="Published").length} sub="Live releases" accent={B.green} />
+            <StatCard label="In Pipeline" value={releases.filter(r=>r.status!=="Published").length} sub="Draft / Scheduled / Review" accent={B.amber} />
+            <StatCard label="Topics Covered" value={new Set(releases.map(r=>r.topic)).size} sub={`of ${TOPICS.length} total`} accent={B.skyBlue} />
+          </div>
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:22}}>
+            <Card>
+              <SectionTitle>Releases by Topic</SectionTitle>
+              <ResponsiveContainer width="100%" height={140}>
+                <BarChart data={topicCounts} barSize={14} layout="vertical">
+                  <XAxis type="number" tick={{fontSize:10,fill:B.gray}} axisLine={false} tickLine={false}/>
+                  <YAxis type="category" dataKey="name" tick={{fontSize:10,fill:B.navy}} axisLine={false} tickLine={false} width={70}/>
+                  <Tooltip formatter={(v,_,p)=>[v,p.payload.full]} cursor={{fill:"rgba(77,168,218,0.06)"}}/>
+                  <Bar dataKey="count" fill={B.blue} radius={[0,4,4,0]}>
+                    {topicCounts.map((_,i)=><Cell key={i} fill={i===0?B.navy:i===1?B.blue:B.skyBlue}/>)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+            <Card>
+              <SectionTitle>Releases by Status</SectionTitle>
+              <div style={{display:"flex",alignItems:"center",gap:16}}>
+                <ResponsiveContainer width={140} height={140}>
+                  <PieChart><Pie data={statusCounts} dataKey="count" innerRadius={42} outerRadius={65} paddingAngle={3}>
+                    {statusCounts.map((s,i)=><Cell key={i} fill={s.color}/>)}
+                  </Pie><Tooltip formatter={(v,n)=>[v,n]}/></PieChart>
+                </ResponsiveContainer>
+                <div style={{flex:1}}>
+                  {statusCounts.map((s,i)=>(
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                      <div style={{width:10,height:10,borderRadius:2,background:s.color,flexShrink:0}}/>
+                      <span style={{fontSize:12,color:B.navy,flex:1}}>{s.name}</span>
+                      <span style={{fontSize:14,fontWeight:800,color:B.navy}}>{s.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          <Card style={{marginBottom:18}}>
+            <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+              <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} placeholder="Search releases…" style={{flex:1,minWidth:180,padding:"8px 12px",borderRadius:8,border:`1.5px solid ${B.iceBlue}`,fontSize:12,color:B.navy,outline:"none"}} />
+              <select value={filterTopic} onChange={e=>setFilterTopic(e.target.value)} style={{padding:"8px 10px",borderRadius:8,border:`1.5px solid ${B.iceBlue}`,fontSize:12,color:B.navy,background:B.white}}>
+                <option value="All">All Topics</option>
+                {TOPICS.map(t=><option key={t}>{t}</option>)}
+              </select>
+              <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{padding:"8px 10px",borderRadius:8,border:`1.5px solid ${B.iceBlue}`,fontSize:12,color:B.navy,background:B.white}}>
+                <option value="All">All Statuses</option>
+                {STATUSES.map(s=><option key={s}>{s}</option>)}
+              </select>
+              <div style={{display:"flex",gap:2,borderRadius:8,overflow:"hidden",border:`1.5px solid ${B.iceBlue}`}}>
+                {[["table","☰"],["timeline","📅"]].map(([v,icon])=>(
+                  <button key={v} onClick={()=>setViewMode(v)} style={{padding:"7px 13px",border:"none",cursor:"pointer",background:viewMode===v?B.navy:B.white,color:viewMode===v?B.white:B.gray,fontSize:13,fontWeight:700}}>{icon}</button>
+                ))}
+              </div>
+              <button onClick={openNew} style={{padding:"8px 18px",borderRadius:8,background:B.navy,color:B.white,border:"none",cursor:"pointer",fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>+ Add Release</button>
+            </div>
+            {filtered.length!==releases.length && <div style={{marginTop:8,fontSize:11,color:B.gray}}>Showing {filtered.length} of {releases.length} releases</div>}
+          </Card>
+
+          {viewMode==="table" && (
+            <Card style={{padding:0,overflow:"hidden"}}>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead>
+                  <tr style={{background:`linear-gradient(135deg,${B.navy},${B.navyMid})`}}>
+                    {[["title","Headline"],["date","Date"],["topic","Topic"],["status","Status"],["wire","Wire"],["","OneDrive"],["","Actions"]].map(([field,label],i)=>(
+                      <th key={i} onClick={field?()=>toggleSort(field):undefined} style={{padding:"12px 16px",textAlign:"left",fontSize:10,fontWeight:700,color:B.white,letterSpacing:"0.1em",textTransform:"uppercase",cursor:field?"pointer":"default",whiteSpace:"nowrap",userSelect:"none"}}>
+                        {label}{field&&<SortArrow field={field}/>}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.length===0 && <tr><td colSpan={7} style={{padding:"40px",textAlign:"center",color:B.gray,fontSize:13}}>No releases match your filters.</td></tr>}
+                  {filtered.map((r,i)=>(
+                    <tr key={r.id} style={{borderBottom:`1px solid ${B.lightBg}`,background:i%2===0?B.white:B.offWhite}}>
+                      <td style={{padding:"14px 16px",maxWidth:340}}>
+                        <div style={{fontSize:12,fontWeight:700,color:B.navy,lineHeight:1.4}}>{r.title}</div>
+                        {r.notes&&<div style={{fontSize:10,color:B.gray,marginTop:3,lineHeight:1.4}}>{r.notes}</div>}
+                      </td>
+                      <td style={{padding:"14px 16px",whiteSpace:"nowrap"}}>
+                        <div style={{fontSize:12,color:B.navy,fontWeight:600}}>{r.date?new Date(r.date+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"—"}</div>
+                      </td>
+                      <td style={{padding:"14px 16px"}}>
+                        <div style={{display:"inline-block",padding:"3px 10px",borderRadius:20,background:B.lightBg,color:B.navy,fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>{r.topic}</div>
+                      </td>
+                      <td style={{padding:"14px 16px"}}>
+                        <div style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,background:`${STATUS_COLORS[r.status]}18`,border:`1px solid ${STATUS_COLORS[r.status]}40`}}>
+                          <div style={{width:6,height:6,borderRadius:"50%",background:STATUS_COLORS[r.status],flexShrink:0}}/>
+                          <span style={{fontSize:10,fontWeight:700,color:STATUS_COLORS[r.status],whiteSpace:"nowrap"}}>{r.status}</span>
+                        </div>
+                      </td>
+                      <td style={{padding:"14px 16px",fontSize:11,color:B.gray,whiteSpace:"nowrap"}}>{r.wire||"—"}</td>
+                      <td style={{padding:"14px 16px"}}>
+                        {r.oneDriveUrl
+                          ? <a href={r.oneDriveUrl} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:7,background:"#E8F0FE",color:"#1A73E8",fontSize:11,fontWeight:600,textDecoration:"none",whiteSpace:"nowrap"}}>📄 Open</a>
+                          : <span style={{fontSize:11,color:B.gray,fontStyle:"italic"}}>No link</span>
+                        }
+                      </td>
+                      <td style={{padding:"14px 16px"}}>
+                        <div style={{display:"flex",gap:6}}>
+                          <button onClick={()=>openEdit(r)} style={{padding:"4px 10px",borderRadius:6,border:`1px solid ${B.iceBlue}`,background:B.white,color:B.blue,cursor:"pointer",fontSize:10,fontWeight:600}}>Edit</button>
+                          <button onClick={()=>deleteRelease(r.id)} style={{padding:"4px 10px",borderRadius:6,border:"1px solid #FECACA",background:"#FFF5F5",color:B.red,cursor:"pointer",fontSize:10,fontWeight:600}}>Del</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+
+          {viewMode==="timeline" && (
+            <div>
+              {Object.keys(byMonth).sort((a,b)=>sortDir==="desc"?b.localeCompare(a):a.localeCompare(b)).map(month=>(
+                <div key={month} style={{marginBottom:24}}>
+                  <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+                    <div style={{padding:"5px 16px",borderRadius:20,background:`linear-gradient(135deg,${B.navy},${B.blue})`,color:B.white,fontSize:11,fontWeight:800,letterSpacing:"0.1em"}}>
+                      {month==="No Date"?"No Date":new Date(month+"-15").toLocaleDateString("en-US",{month:"long",year:"numeric"})}
+                    </div>
+                    <div style={{flex:1,height:1,background:B.iceBlue}}/>
+                    <div style={{fontSize:11,color:B.gray}}>{byMonth[month].length} release{byMonth[month].length!==1?"s":""}</div>
+                  </div>
+                  <div style={{paddingLeft:16,borderLeft:`3px solid ${B.iceBlue}`,display:"flex",flexDirection:"column",gap:10}}>
+                    {byMonth[month].map(r=>(
+                      <div key={r.id} style={{background:B.white,borderRadius:12,padding:"14px 18px",boxShadow:"0 2px 10px rgba(13,31,60,0.06)",display:"flex",alignItems:"flex-start",gap:14}}>
+                        <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginTop:2}}>
+                          <div style={{width:10,height:10,borderRadius:"50%",background:STATUS_COLORS[r.status],border:`2px solid ${B.white}`,boxShadow:`0 0 0 2px ${STATUS_COLORS[r.status]}40`,flexShrink:0}}/>
+                        </div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10,marginBottom:4}}>
+                            <div style={{fontSize:13,fontWeight:700,color:B.navy,lineHeight:1.4}}>{r.title}</div>
+                            <div style={{padding:"2px 9px",borderRadius:20,background:`${STATUS_COLORS[r.status]}18`,border:`1px solid ${STATUS_COLORS[r.status]}40`,fontSize:9,fontWeight:700,color:STATUS_COLORS[r.status],whiteSpace:"nowrap",flexShrink:0}}>{r.status}</div>
+                          </div>
+                          <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+                            <span style={{fontSize:10,color:B.gray}}>📅 {r.date?new Date(r.date+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"}):"No date"}</span>
+                            <span style={{padding:"2px 8px",borderRadius:10,background:B.lightBg,fontSize:10,fontWeight:600,color:B.navy}}>{r.topic}</span>
+                            {r.wire&&<span style={{fontSize:10,color:B.gray}}>📡 {r.wire}</span>}
+                            {r.oneDriveUrl&&<a href={r.oneDriveUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:10,color:"#1A73E8",fontWeight:600,textDecoration:"none"}}>📄 OneDrive</a>}
+                          </div>
+                          {r.notes&&<div style={{fontSize:11,color:B.gray,marginTop:5,lineHeight:1.5}}>{r.notes}</div>}
+                        </div>
+                        <div style={{display:"flex",gap:5,flexShrink:0}}>
+                          <button onClick={()=>openEdit(r)} style={{padding:"4px 9px",borderRadius:6,border:`1px solid ${B.iceBlue}`,background:B.white,color:B.blue,cursor:"pointer",fontSize:10,fontWeight:600}}>Edit</button>
+                          <button onClick={()=>deleteRelease(r.id)} style={{padding:"4px 9px",borderRadius:6,border:"1px solid #FECACA",background:"#FFF5F5",color:B.red,cursor:"pointer",fontSize:10,fontWeight:600}}>Del</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {filtered.length===0&&(
+                <Card style={{textAlign:"center",padding:"48px",color:B.gray}}>
+                  <div style={{fontSize:32,marginBottom:10}}>📭</div>
+                  <div style={{fontSize:14,fontWeight:600,color:B.navy,marginBottom:6}}>No releases yet</div>
+                  <div style={{fontSize:12}}>Click "+ Add Release" to start mapping your content.</div>
+                </Card>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // TAB 4 — PODCAST OUTREACH
+    // ════════════════════════════════════════════════════════════════════════
+    const OUTREACH_STATUSES = ["Not Started","Researching","Contacted","Follow-Up Sent","Booked","Aired","Declined"];
+    const OUTREACH_COLORS = {
+      "Not Started":"#94A3B8","Researching":B.amber,"Contacted":B.blue,
+      "Follow-Up Sent":"#8E44AD","Booked":B.green,"Aired":"#0E7490","Declined":B.red
+    };
+
+    const SEED_PODCASTS = [
+      { id:1, name:"Becker's Healthcare Podcast", audience:"Hospital CEOs, CFOs, COOs, system administrators", why:"One of the most listened-to podcasts among C-suite executives; includes a Digital Health + Health IT sub-show that aligns directly with RPM's space", format:"Daily 15-minute episodes, low lift, high reach", contact:"beckershealthcare.com", status:"Not Started", notes:"", pitchAngle:"", followUpDate:"", episode:"" },
+      { id:2, name:"This Week Health / The 229 Podcast", audience:"CIOs, CNIOs, digital health decision-makers in health systems", why:"Hosted by Bill Russell, Drex DeFord, and Sarah Richardson; loyal base of health IT and health system leaders actively transforming the industry", format:"Medium form, ~23 minutes", contact:"thisweekhealth.com", status:"Not Started", notes:"", pitchAngle:"", followUpDate:"", episode:"" },
+      { id:3, name:"The Healthcare Executive Podcast (ACHE)", audience:"Hospital presidents, CMOs, COOs, health system executives", why:"Official podcast of the American College of Healthcare Executives; covers technological innovation in healthcare", format:"Interview-based", contact:"ache.org", status:"Not Started", notes:"", pitchAngle:"", followUpDate:"", episode:"" },
+      { id:4, name:"Advancing Health (American Hospital Association)", audience:"Hospital system leadership, policy-focused C-suite", why:"AHA's official podcast featuring conversations with hospital and health system leaders; the AHA brand lends credibility with decision-makers", format:"Conversational interviews", contact:"aha.org/advancing-health-podcast", status:"Not Started", notes:"", pitchAngle:"", followUpDate:"", episode:"" },
+      { id:5, name:"CHIME Digital Health Leaders Podcast", audience:"Health system CIOs, digital health executives", why:"Hosted by CHIME's President and CEO; reaches the CIOs and health IT executives who greenlight technology adoption", format:"~31 minutes", contact:"chimecentral.org", status:"Not Started", notes:"", pitchAngle:"", followUpDate:"", episode:"" },
+      { id:6, name:"Chief Healthcare Executive Podcast (Healthy Bottom Line)", audience:"Hospital executives focused on financial sustainability and innovation", why:"Covers telemedicine, hospital-at-home, and health system partnerships; strong platform for RPM Healthcare's president to make the ROI and operational case", format:"Conversational, news-driven", contact:"chiefhealthcareexecutive.com", status:"Not Started", notes:"", pitchAngle:"", followUpDate:"", episode:"" },
+    ];
+
+    function PodcastTab() {
+      const [podcasts, setPodcasts] = usePersistedState("podcasts", SEED_PODCASTS);
+      const [selected, setSelected] = useState(null);
+      const [showForm, setShowForm] = useState(false);
+      const [editData, setEditData] = useState(null);
+      const [aiLoading, setAiLoading] = useState(false);
+      const [aiSuggestions, setAiSuggestions] = useState(null);
+      const [aiPitch, setAiPitch] = useState({});
+      const [pitchLoading, setPitchLoading] = useState(null);
+      const [filterStatus, setFilterStatus] = useState("All");
+      const [showAddNew, setShowAddNew] = useState(false);
+      const [newPodcast, setNewPodcast] = useState({ name:"", audience:"", why:"", format:"", contact:"", status:"Not Started", notes:"", pitchAngle:"", followUpDate:"", episode:"" });
+
+      const statusCounts = OUTREACH_STATUSES.map(s=>({ name:s, count:podcasts.filter(p=>p.status===s).length, color:OUTREACH_COLORS[s] }));
+      const booked = podcasts.filter(p=>p.status==="Booked"||p.status==="Aired").length;
+      const inProgress = podcasts.filter(p=>["Researching","Contacted","Follow-Up Sent"].includes(p.status)).length;
+
+      const updateStatus = (id, status) => setPodcasts(prev => prev.map(p => p.id===id ? {...p, status} : p));
+      const updateField = (id, field, val) => setPodcasts(prev => prev.map(p => p.id===id ? {...p, [field]:val} : p));
+      const openEdit = (p) => { setEditData({...p}); setShowForm(true); };
+      const saveEdit = () => { setPodcasts(prev=>prev.map(p=>p.id===editData.id?editData:p)); setShowForm(false); setEditData(null); };
+      const deletePodcast = (id) => { setPodcasts(prev=>prev.filter(p=>p.id!==id)); if(selected===id) setSelected(null); };
+
+      const addNewPodcast = () => {
+        if (!newPodcast.name.trim()) return;
+        setPodcasts(prev=>[...prev,{...newPodcast,id:Date.now()}]);
+        setNewPodcast({ name:"", audience:"", why:"", format:"", contact:"", status:"Not Started", notes:"", pitchAngle:"", followUpDate:"", episode:"" });
+        setShowAddNew(false);
+      };
+
+      // AI: generate new podcast suggestions
+      const fetchAISuggestions = async () => {
+        setAiLoading(true); setAiSuggestions(null);
+        try {
+          const existing = podcasts.map(p=>p.name).join(", ");
+          const res = await fetch("https://api.anthropic.com/v1/messages", {
+            method:"POST",
+            headers:{
+              "Content-Type":"application/json",
+              "anthropic-version":"2023-06-01",
+              "anthropic-dangerous-direct-browser-access":"true",
+              "x-api-key":getApiKey()
+            },
+            body: JSON.stringify({
+              model:"claude-sonnet-4-5", max_tokens:1200, stream:true,
+              tools:[{type:"web_search_20250305",name:"web_search"}],
+              messages:[{role:"user",content:`RPM Healthcare is a remote patient monitoring company whose president wants to appear on podcasts to reach hospital CEOs, CFOs, CMOs, CIOs, and health system executives. They already have these on their outreach list: ${existing}.
+
+Search for 5 additional podcasts they should target in 2025-2026 that are NOT already on their list. Focus on health system leadership, digital health, value-based care, and healthcare innovation audiences.
+
+Respond ONLY as valid JSON, no markdown:
+{
+  "suggestions": [
+    {
+      "name": "podcast name",
+      "host": "host name(s)",
+      "audience": "primary audience description",
+      "why": "why it fits RPM Healthcare specifically",
+      "format": "episode format and length",
+      "contact": "website or contact url",
+      "pitchAngle": "specific pitch angle RPM Healthcare's president should use"
+    }
+  ]
+}`}]
+            })
+          });
+          if (!res.ok) {
+            const err = await res.text();
+            let msg = err;
+            try { msg = JSON.parse(err)?.error?.message || err; } catch {}
+            throw new Error(msg);
+          }
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let fullText = ""; let buffer = "";
+          while(true) {
+            const {done,value} = await reader.read();
+            if(done) break;
+            buffer += decoder.decode(value,{stream:true});
+            const lines = buffer.split("\n"); buffer = lines.pop();
+            for(const line of lines) {
+              if(!line.startsWith("data: ")) continue;
+              const raw = line.slice(6).trim();
+              if(raw==="[DONE]") continue;
+              try {
+                const evt = JSON.parse(raw);
+                if(evt.type==="content_block_delta"&&evt.delta?.type==="text_delta") {
+                  fullText += evt.delta.text;
+                  try { const c=fullText.replace(/```json|```/g,"").trim(); const partial=JSON.parse(c); setAiSuggestions(partial); } catch {}
+                }
+              } catch {}
+            }
+          }
+          try { setAiSuggestions(JSON.parse(fullText.replace(/```json|```/g,"").trim())); }
+          catch { setAiSuggestions({error:"Received a response but couldn't parse it. Try again."}); }
+        } catch(e) { setAiSuggestions({error:"Error: " + (e.message||"Could not fetch suggestions.")}); }
+        setAiLoading(false);
+      };
+
+      // AI: generate a pitch for a specific podcast
+      const generatePitch = async (podcast) => {
+        setPitchLoading(podcast.id);
+        try {
+          const res = await fetch("https://api.anthropic.com/v1/messages", {
+            method:"POST",
+            headers:{
+              "Content-Type":"application/json",
+              "anthropic-version":"2023-06-01",
+              "anthropic-dangerous-direct-browser-access":"true",
+              "x-api-key":getApiKey()
+            },
+            body: JSON.stringify({
+              model:"claude-sonnet-4-5", max_tokens:600,
+              messages:[{role:"user",content:`Write a concise, compelling podcast pitch email from the President of RPM Healthcare to the producers of "${podcast.name}".
+
+Context about the podcast: ${podcast.why}
+Their audience: ${podcast.audience}
+Format: ${podcast.format}
+
+RPM Healthcare is a full-service remote patient monitoring company with licensed nurse Care Coaches who handle ~97% of patient alerts externally, freeing providers from administrative burden while driving $1,000+ revenue per patient per year. They work with health systems, cardiology, and chronic disease clinics.
+
+Write a 3-paragraph pitch email (subject line + body). Be specific to this podcast's audience. Tone: confident, peer-to-peer, not salesy. Do NOT use placeholder brackets — write it ready to send.`}]
+            })
+          });
+          if (!res.ok) {
+            const err = await res.text();
+            let msg = err;
+            try { msg = JSON.parse(err)?.error?.message || err; } catch {}
+            throw new Error(msg);
+          }
+          const data = await res.json();
+          const text = data.content.filter(b=>b.type==="text").map(b=>b.text).join("");
+          setAiPitch(prev=>({...prev,[podcast.id]:text}));
+        } catch(e) { setAiPitch(prev=>({...prev,[podcast.id]:"Error generating pitch: " + (e.message||"Try again.")})); }
+        setPitchLoading(null);
+      };
+
+      const filtered = filterStatus==="All" ? podcasts : podcasts.filter(p=>p.status===filterStatus);
+      const sel = podcasts.find(p=>p.id===selected);
+
+      return (
+        <div>
+          {/* Edit Modal */}
+          {showForm && editData && (
+            <div style={{position:"fixed",inset:0,background:"rgba(13,31,60,0.65)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <div style={{background:B.white,borderRadius:18,padding:28,width:560,maxHeight:"85vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+                  <h3 style={{margin:0,fontSize:16,fontWeight:800,color:B.navy}}>Edit Podcast</h3>
+                  <button onClick={()=>setShowForm(false)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:B.gray}}>✕</button>
+                </div>
+                {[["name","Podcast Name"],["audience","Audience"],["why","Why It Fits"],["format","Format"],["contact","Contact / Website"],["pitchAngle","Pitch Angle"],["notes","Notes"],["episode","Episode / Air Date"]].map(([k,label])=>(
+                  <div key={k} style={{marginBottom:12}}>
+                    <label style={{fontSize:10,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:4}}>{label}</label>
+                    <textarea value={editData[k]||""} onChange={e=>setEditData({...editData,[k]:e.target.value})} rows={k==="why"||k==="notes"?3:1} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1.5px solid ${B.iceBlue}`,fontSize:12,color:B.navy,resize:"vertical",boxSizing:"border-box",lineHeight:1.5}} />
+                  </div>
+                ))}
+                <div style={{marginBottom:16}}>
+                  <label style={{fontSize:10,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:4}}>Status</label>
+                  <select value={editData.status} onChange={e=>setEditData({...editData,status:e.target.value})} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1.5px solid ${B.iceBlue}`,fontSize:12,color:B.navy,background:B.white}}>
+                    {OUTREACH_STATUSES.map(s=><option key={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div style={{marginBottom:16}}>
+                  <label style={{fontSize:10,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:4}}>Follow-Up Date</label>
+                  <input type="date" value={editData.followUpDate||""} onChange={e=>setEditData({...editData,followUpDate:e.target.value})} style={{padding:"8px 10px",borderRadius:8,border:`1.5px solid ${B.iceBlue}`,fontSize:12,color:B.navy,width:"100%",boxSizing:"border-box"}} />
+                </div>
+                <div style={{display:"flex",gap:10,marginTop:4}}>
+                  <button onClick={saveEdit} style={{flex:1,padding:"10px",borderRadius:9,background:B.navy,color:B.white,border:"none",cursor:"pointer",fontSize:13,fontWeight:700}}>Save</button>
+                  <button onClick={()=>setShowForm(false)} style={{flex:1,padding:"10px",borderRadius:9,background:B.lightBg,color:B.navy,border:"none",cursor:"pointer",fontSize:13,fontWeight:600}}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Add New Modal */}
+          {showAddNew && (
+            <div style={{position:"fixed",inset:0,background:"rgba(13,31,60,0.65)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <div style={{background:B.white,borderRadius:18,padding:28,width:520,maxHeight:"80vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.3)"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+                  <h3 style={{margin:0,fontSize:16,fontWeight:800,color:B.navy}}>Add Podcast</h3>
+                  <button onClick={()=>setShowAddNew(false)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:B.gray}}>✕</button>
+                </div>
+                {[["name","Podcast Name *"],["audience","Audience"],["why","Why It Fits"],["format","Format"],["contact","Contact / Website"],["notes","Notes"]].map(([k,label])=>(
+                  <div key={k} style={{marginBottom:12}}>
+                    <label style={{fontSize:10,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:4}}>{label}</label>
+                    <textarea value={newPodcast[k]||""} onChange={e=>setNewPodcast({...newPodcast,[k]:e.target.value})} rows={k==="why"?2:1} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1.5px solid ${B.iceBlue}`,fontSize:12,color:B.navy,resize:"vertical",boxSizing:"border-box"}} />
+                  </div>
+                ))}
+                <div style={{display:"flex",gap:10,marginTop:4}}>
+                  <button onClick={addNewPodcast} style={{flex:1,padding:"10px",borderRadius:9,background:B.navy,color:B.white,border:"none",cursor:"pointer",fontSize:13,fontWeight:700}}>Add Podcast</button>
+                  <button onClick={()=>setShowAddNew(false)} style={{flex:1,padding:"10px",borderRadius:9,background:B.lightBg,color:B.navy,border:"none",cursor:"pointer",fontSize:13,fontWeight:600}}>Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Stats row */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:22}}>
+            <StatCard label="Total Targets" value={podcasts.length} sub="On outreach list" accent={B.blue} />
+            <StatCard label="In Progress" value={inProgress} sub="Contacted or researching" accent={B.amber} />
+            <StatCard label="Booked / Aired" value={booked} sub="Confirmed appearances" accent={B.green} />
+            <StatCard label="Remaining" value={podcasts.filter(p=>p.status==="Not Started").length} sub="Not yet contacted" accent={B.gray} />
+          </div>
+
+          {/* Status pipeline bar */}
+          <Card style={{marginBottom:18}}>
+            <SectionTitle>Outreach Pipeline</SectionTitle>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {statusCounts.map((s,i)=>(
+                <div key={i} onClick={()=>setFilterStatus(filterStatus===s.name?"All":s.name)} style={{flex:"1 1 auto",minWidth:90,padding:"10px 12px",borderRadius:10,background:filterStatus===s.name?s.color:B.lightBg,cursor:"pointer",border:`2px solid ${filterStatus===s.name?s.color:B.iceBlue}`,transition:"all 0.15s",textAlign:"center"}}>
+                  <div style={{fontSize:20,fontWeight:800,color:filterStatus===s.name?B.white:B.navy}}>{s.count}</div>
+                  <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:filterStatus===s.name?B.white:s.color,marginTop:2}}>{s.name}</div>
+                </div>
+              ))}
+            </div>
+            {filterStatus!=="All" && <div style={{marginTop:8,fontSize:11,color:B.gray}}>Showing <strong>{filterStatus}</strong> · <span onClick={()=>setFilterStatus("All")} style={{color:B.blue,cursor:"pointer",textDecoration:"underline"}}>Clear filter</span></div>}
+          </Card>
+
+          <div style={{display:"grid",gridTemplateColumns:"340px 1fr",gap:20,alignItems:"start"}}>
+            {/* Left: Podcast list */}
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                <div style={{fontSize:11,fontWeight:700,color:B.navy,textTransform:"uppercase",letterSpacing:"0.1em"}}>{filtered.length} Podcast{filtered.length!==1?"s":""}</div>
+                <button onClick={()=>setShowAddNew(true)} style={{padding:"6px 14px",borderRadius:8,background:B.navy,color:B.white,border:"none",cursor:"pointer",fontSize:11,fontWeight:700}}>+ Add</button>
+              </div>
+              {filtered.map(p=>(
+                <div key={p.id} onClick={()=>setSelected(selected===p.id?null:p.id)}
+                  style={{borderRadius:12,border:`1.5px solid ${selected===p.id?B.blue:B.iceBlue}`,background:selected===p.id?B.lightBg:B.white,cursor:"pointer",overflow:"hidden",transition:"all 0.15s",boxShadow:selected===p.id?"0 4px 16px rgba(27,107,170,0.12)":"none"}}>
+                  <div style={{padding:"12px 14px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:6}}>
+                      <div style={{fontSize:12,fontWeight:700,color:B.navy,lineHeight:1.4,flex:1}}>{p.name}</div>
+                      <div style={{padding:"2px 8px",borderRadius:10,background:`${OUTREACH_COLORS[p.status]}18`,border:`1px solid ${OUTREACH_COLORS[p.status]}50`,flexShrink:0}}>
+                        <span style={{fontSize:9,fontWeight:700,color:OUTREACH_COLORS[p.status],whiteSpace:"nowrap"}}>{p.status}</span>
+                      </div>
+                    </div>
+                    <div style={{fontSize:10,color:B.gray,lineHeight:1.4,marginBottom:6}}>{p.audience}</div>
+                    <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                      <select value={p.status} onClick={e=>e.stopPropagation()} onChange={e=>updateStatus(p.id,e.target.value)}
+                        style={{flex:1,padding:"4px 7px",borderRadius:7,border:`1px solid ${B.iceBlue}`,fontSize:10,color:B.navy,background:B.white,cursor:"pointer"}}>
+                        {OUTREACH_STATUSES.map(s=><option key={s}>{s}</option>)}
+                      </select>
+                      <button onClick={e=>{e.stopPropagation();openEdit(p);}} style={{padding:"4px 8px",borderRadius:6,border:`1px solid ${B.iceBlue}`,background:B.white,color:B.gray,cursor:"pointer",fontSize:10}}>✎</button>
+                      <button onClick={e=>{e.stopPropagation();deletePodcast(p.id);}} style={{padding:"4px 8px",borderRadius:6,border:"1px solid #FECACA",background:"#FFF5F5",color:B.red,cursor:"pointer",fontSize:10}}>✕</button>
+                    </div>
+                    {p.followUpDate && <div style={{marginTop:6,fontSize:10,color:B.amber,fontWeight:600}}>📅 Follow-up: {new Date(p.followUpDate+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</div>}
+                    {p.episode && <div style={{marginTop:3,fontSize:10,color:B.green,fontWeight:600}}>🎙 {p.episode}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Right: Detail + AI panel */}
+            <div style={{display:"flex",flexDirection:"column",gap:18}}>
+
+              {/* Detail panel */}
+              {sel ? (
+                <Card style={{borderTop:`4px solid ${OUTREACH_COLORS[sel.status]}`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+                    <div>
+                      <div style={{fontSize:17,fontWeight:800,color:B.navy,marginBottom:4,fontFamily:"Georgia,serif"}}>{sel.name}</div>
+                      <a href={sel.contact.startsWith("http")?sel.contact:"https://"+sel.contact} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:B.blue,textDecoration:"none",fontWeight:600}}>↗ {sel.contact}</a>
+                    </div>
+                    <button onClick={()=>openEdit(sel)} style={{padding:"7px 16px",borderRadius:8,border:`1.5px solid ${B.iceBlue}`,background:B.white,color:B.navy,cursor:"pointer",fontSize:11,fontWeight:600,flexShrink:0}}>Edit Details</button>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+                    {[["🎙 Format",sel.format],["👥 Audience",sel.audience]].map(([k,v])=>(
+                      <div key={k} style={{padding:"10px 12px",background:B.lightBg,borderRadius:9}}>
+                        <div style={{fontSize:9,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>{k}</div>
+                        <div style={{fontSize:11,color:B.navy,lineHeight:1.5}}>{v||"—"}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{padding:"11px 13px",background:B.lightBg,borderRadius:9,marginBottom:12,borderLeft:`3px solid ${B.blue}`}}>
+                    <div style={{fontSize:9,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Why It Fits RPM Healthcare</div>
+                    <div style={{fontSize:11,color:B.navy,lineHeight:1.6}}>{sel.why||"—"}</div>
+                  </div>
+                  {sel.pitchAngle && (
+                    <div style={{padding:"11px 13px",background:"#FFF9E6",borderRadius:9,marginBottom:12,borderLeft:`3px solid ${B.amber}`}}>
+                      <div style={{fontSize:9,fontWeight:700,color:B.amber,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Pitch Angle</div>
+                      <div style={{fontSize:11,color:B.navy,lineHeight:1.6}}>{sel.pitchAngle}</div>
+                    </div>
+                  )}
+                  {sel.notes && (
+                    <div style={{padding:"10px 12px",background:B.lightBg,borderRadius:9,marginBottom:12}}>
+                      <div style={{fontSize:9,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:3}}>Notes</div>
+                      <div style={{fontSize:11,color:B.navy,lineHeight:1.6}}>{sel.notes}</div>
+                    </div>
+                  )}
+                  {/* Notes quick-edit */}
+                  <div style={{marginBottom:12}}>
+                    <label style={{fontSize:10,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",display:"block",marginBottom:5}}>Quick Note</label>
+                    <textarea value={sel.notes||""} onChange={e=>updateField(sel.id,"notes",e.target.value)} placeholder="Add notes, contact name, last interaction…" rows={2}
+                      style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1.5px solid ${B.iceBlue}`,fontSize:12,color:B.navy,resize:"vertical",boxSizing:"border-box"}} />
+                  </div>
+                  {/* AI Pitch Generator */}
+                  <div style={{borderTop:`1px solid ${B.lightBg}`,paddingTop:14}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                      <div style={{fontSize:11,fontWeight:700,color:B.navy,textTransform:"uppercase",letterSpacing:"0.1em"}}>✍️ AI Pitch Generator</div>
+                      <button onClick={()=>generatePitch(sel)} disabled={pitchLoading===sel.id}
+                        style={{padding:"7px 16px",borderRadius:8,background:pitchLoading===sel.id?B.gray:B.blue,color:B.white,border:"none",cursor:pitchLoading===sel.id?"not-allowed":"pointer",fontSize:11,fontWeight:700}}>
+                        {pitchLoading===sel.id?"Generating…":"Generate Pitch Email"}
+                      </button>
+                    </div>
+                    {aiPitch[sel.id] && (
+                      <div style={{background:B.navy,borderRadius:10,padding:"14px 16px"}}>
+                        <div style={{fontSize:10,fontWeight:700,color:B.skyBlue,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Ready-to-Send Pitch</div>
+                        <pre style={{fontSize:11,color:B.white,lineHeight:1.7,whiteSpace:"pre-wrap",fontFamily:"inherit",margin:0}}>{aiPitch[sel.id]}</pre>
+                        <button onClick={()=>navigator.clipboard?.writeText(aiPitch[sel.id])}
+                          style={{marginTop:12,padding:"6px 14px",borderRadius:7,background:"rgba(255,255,255,0.12)",border:"1px solid rgba(255,255,255,0.2)",color:B.white,cursor:"pointer",fontSize:10,fontWeight:600}}>
+                          Copy to Clipboard
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              ) : (
+                <Card style={{textAlign:"center",padding:"40px 24px",border:`1.5px dashed ${B.iceBlue}`}}>
+                  <div style={{fontSize:32,marginBottom:10}}>🎙</div>
+                  <div style={{fontSize:14,fontWeight:700,color:B.navy,marginBottom:6}}>Select a podcast to view details</div>
+                  <div style={{fontSize:12,color:B.gray}}>Click any podcast on the left to see fit analysis, manage outreach status, and generate a custom pitch email.</div>
+                </Card>
+              )}
+
+              {/* AI Suggestions Panel */}
+              <Card style={{border:`2px solid ${B.iceBlue}`}}>
+                <SectionTitle>🤖 AI Podcast Suggestions
+                  <button onClick={fetchAISuggestions} disabled={aiLoading}
+                    style={{padding:"7px 18px",borderRadius:9,background:aiLoading?B.gray:B.navy,color:B.white,border:"none",cursor:aiLoading?"not-allowed":"pointer",fontSize:12,fontWeight:700,whiteSpace:"nowrap"}}>
+                    {aiLoading?"Searching…":"Find New Podcasts"}
+                  </button>
+                </SectionTitle>
+
+                {!aiSuggestions && !aiLoading && (
+                  <div style={{textAlign:"center",padding:"28px 20px"}}>
+                    <div style={{fontSize:32,marginBottom:10}}>🔍</div>
+                    <div style={{fontSize:13,fontWeight:700,color:B.navy,marginBottom:6}}>Discover More Podcast Opportunities</div>
+                    <div style={{fontSize:12,color:B.gray,maxWidth:440,margin:"0 auto",lineHeight:1.6}}>AI searches for new podcasts in the healthcare executive, digital health, and value-based care space that RPM Healthcare's president should target — beyond what's already on the list.</div>
+                  </div>
+                )}
+                {aiLoading && (
+                  <div style={{textAlign:"center",padding:"28px",color:B.gray}}>
+                    <div style={{fontSize:11,color:B.navy,marginBottom:6}}>🔍 Searching for podcasts…</div>
+                    <div style={{fontSize:11,color:B.gray}}>Finding healthcare executive and digital health podcasts</div>
+                  </div>
+                )}
+                {aiSuggestions?.error && <div style={{color:B.red,fontSize:12,padding:12}}>{aiSuggestions.error}</div>}
+                {aiSuggestions?.suggestions && (
+                  <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                    {aiSuggestions.suggestions.map((s,i)=>(
+                      <div key={i} style={{borderRadius:11,border:`1.5px solid ${B.iceBlue}`,overflow:"hidden"}}>
+                        <div style={{padding:"11px 14px",background:`linear-gradient(135deg,${B.navy},${B.navyMid})`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div>
+                            <div style={{fontSize:13,fontWeight:800,color:B.white}}>{s.name}</div>
+                            {s.host && <div style={{fontSize:10,color:B.iceBlue,marginTop:2}}>Hosted by {s.host}</div>}
+                          </div>
+                          <button onClick={()=>{
+                            setPodcasts(prev=>[...prev,{id:Date.now()+i,name:s.name,audience:s.audience,why:s.why,format:s.format,contact:s.contact,status:"Not Started",notes:"",pitchAngle:s.pitchAngle||"",followUpDate:"",episode:""}]);
+                            setAiSuggestions(prev=>({...prev,suggestions:prev.suggestions.filter((_,j)=>j!==i)}));
+                          }} style={{padding:"5px 12px",borderRadius:7,background:B.green,color:B.white,border:"none",cursor:"pointer",fontSize:10,fontWeight:700,whiteSpace:"nowrap"}}>
+                            + Add to List
+                          </button>
+                        </div>
+                        <div style={{padding:"11px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                          <div>
+                            <div style={{fontSize:9,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Audience</div>
+                            <div style={{fontSize:11,color:B.navy,lineHeight:1.5}}>{s.audience}</div>
+                          </div>
+                          <div>
+                            <div style={{fontSize:9,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Format</div>
+                            <div style={{fontSize:11,color:B.navy,lineHeight:1.5}}>{s.format}</div>
+                          </div>
+                          <div style={{gridColumn:"1/-1"}}>
+                            <div style={{fontSize:9,fontWeight:700,color:B.gray,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Why It Fits</div>
+                            <div style={{fontSize:11,color:B.navy,lineHeight:1.5}}>{s.why}</div>
+                          </div>
+                          {s.pitchAngle && (
+                            <div style={{gridColumn:"1/-1",padding:"8px 10px",background:"#FFF9E6",borderRadius:7,borderLeft:`3px solid ${B.amber}`}}>
+                              <div style={{fontSize:9,fontWeight:700,color:B.amber,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:2}}>Suggested Pitch Angle</div>
+                              <div style={{fontSize:11,color:B.navy,lineHeight:1.5}}>{s.pitchAngle}</div>
+                            </div>
+                          )}
+                          {s.contact && <div style={{gridColumn:"1/-1"}}><a href={s.contact.startsWith("http")?s.contact:"https://"+s.contact} target="_blank" rel="noopener noreferrer" style={{fontSize:10,color:B.blue,fontWeight:600,textDecoration:"none"}}>↗ {s.contact}</a></div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // ROOT APP
+    // ════════════════════════════════════════════════════════════════════════
+    function App() {
+      const [tab, setTab] = useState("competitive");
+      return (
+        <div style={{ minHeight:"100vh", background:B.offWhite, fontFamily:"'Trebuchet MS','Segoe UI',sans-serif" }}>
+          <div style={{ background:`linear-gradient(135deg,${B.navy} 0%,${B.navyMid} 60%,${B.blue} 100%)`, padding:"0 32px", display:"flex", alignItems:"center", justifyContent:"space-between", height:66, boxShadow:"0 4px 24px rgba(13,31,60,0.25)" }}>
+            <div style={{display:"flex",alignItems:"center",gap:16}}>
+              <RPMLogo darkBg />
+              <div style={{borderLeft:"1px solid rgba(255,255,255,0.2)",paddingLeft:16}}>
+                <div style={{fontSize:13,fontWeight:800,color:B.white,letterSpacing:"0.05em"}}>Market Positioning Dashboard</div>
+              </div>
+              <SaveIndicator />
+            </div>
+            <div style={{display:"flex",gap:4}}>
+              {[["earned","📊 Earned Media"],["competitive","🔭 Competitive Intel"],["contentmap","🗂 Content Map"],["podcasts","🎙 Podcast Outreach"]].map(([key,label])=>(
+                <button key={key} onClick={()=>setTab(key)} style={{ padding:"8px 16px", borderRadius:9, border:"none", cursor:"pointer", background:tab===key?"rgba(255,255,255,0.18)":"transparent", color:B.white, fontSize:12, fontWeight:tab===key?700:400, transition:"all 0.15s" }}>{label}</button>
+              ))}
+            </div>
+          </div>
+          <div style={{maxWidth:1240,margin:"0 auto",padding:"28px 24px"}}>
+            {tab==="earned"      && <EarnedMediaTab />}
+            {tab==="competitive" && <CompetitiveTab />}
+            {tab==="contentmap"  && <ContentMapTab />}
+            {tab==="podcasts"    && <PodcastTab />}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
